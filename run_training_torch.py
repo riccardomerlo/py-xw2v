@@ -23,7 +23,7 @@ WEATLIST = S+T+A+B
 """
 Read CORPUS
 """
-text = read_corpus('/corpus/nyt_articles_31.txt')
+text = read_corpus('./corpus/nyt_articles_31.txt')
 
 """
 Create DATASET
