@@ -3,6 +3,10 @@ import collections
 import numpy as np
 import nltk
 nltk.download('punkt')
+import torch
+
+torch.set_default_tensor_type(torch.cuda.FloatTensor if torch.cuda.is_available() 
+                                                     else torch.FloatTensor)
 
 
 def get_vocab(text):
