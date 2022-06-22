@@ -5,6 +5,9 @@ from typing import List, \
     Union
 from dataset_torch import split_given_size
 
+torch.set_default_tensor_type(torch.cuda.FloatTensor if torch.cuda.is_available() 
+                                                     else torch.FloatTensor)
+
 
 def fixed_unigram_candidate_sampler(
         true_classes: Union[np.array, torch.Tensor],
