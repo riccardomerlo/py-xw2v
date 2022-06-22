@@ -15,7 +15,6 @@ def fixed_unigram_candidate_sampler(
         unigrams: List[Union[int, float]],
         distortion: float = 1.):
     
-    print(true_classes)
     if isinstance(true_classes, torch.Tensor):
         true_classes = true_classes.cpu().detach().numpy()
     if true_classes.shape[0] != num_samples:
