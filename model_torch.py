@@ -16,7 +16,7 @@ def fixed_unigram_candidate_sampler(
         distortion: float = 1.):
 
     if isinstance(true_classes, torch.Tensor):
-        true_classes = true_classes.detach().cpu().numpy()
+        true_classes = true_classes.detach().numpy()
     if true_classes.shape[0] != num_samples:
         raise ValueError(
             'true_classes must be a 2D matrix with shape (num_samples, num_true)')
