@@ -115,13 +115,13 @@ class Word2VecModel(torch.nn.Module):
         sampled_values = split_given_size(sampled_values, batch_size)
         sampled_values = np.array(
             [x for x in sampled_values if len(x) == batch_size])
-        sampled_values = torch.from_numpy(sampled_values)
+        sampled_values = torch.from_numpy(sampled_values).cuda()
         # sampled_mat = torch.reshape(sampled_values, (batch_size, negatives))
 
         inputs_syn0 = torch.index_select(
-            syn0, 0, torch.from_numpy(np.array(inputs)))
+            syn0, 0, torch.from_numpy(np.array(inputs)).cuda())
         true_syn1 = torch.index_select(
-            syn1, 0, torch.from_numpy(np.array(labels)))
+            syn1, 0, torch.from_numpy(np.array(labels)).cuda())
 
         # sampled_syn1 = syn1[sampled_values]
         list_sampled_syn1 = []
@@ -176,8 +176,8 @@ class Word2VecModel(torch.nn.Module):
         print("Training completed")
 
         # get weights matrixes as numpy array
-        syn0_final = self.syn0.detach().numpy()
-        syn1_final = self.syn1.detach().numpy()
+        syn0_final = self.syn0.cpu().detach().numpy()
+        syn1_final = self.syn1.cpu().detach().numpy()
 
         if save:
             np.save('syn0_final_torch', syn0_final)

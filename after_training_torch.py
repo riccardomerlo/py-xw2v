@@ -70,9 +70,9 @@ def _full_loss_torch(input, label, batch_size, unigram_counts, negatives, weight
     contexts.append(np.array(list(vocab_tmp)))
 
     inputs_syn0 = torch.index_select(
-        syn0, 0, torch.from_numpy(np.array(input)))
-    context_syn1 = torch.index_select(syn1, 0, torch.from_numpy(contexts[0]))
-    true_syn1 = torch.index_select(syn1, 0, torch.from_numpy(np.array(label)))
+        syn0, 0, torch.from_numpy(np.array(input)).cuda())
+    context_syn1 = torch.index_select(syn1, 0, torch.from_numpy(contexts[0]).cuda())
+    true_syn1 = torch.index_select(syn1, 0, torch.from_numpy(np.array(label)).cuda())
 
     true_logits = torch.sum(torch.multiply(inputs_syn0, true_syn1), dim=1)
     true_logits.requires_grad_()
@@ -110,8 +110,8 @@ def _true_loss_torch(input, label, batch_size, unigram_counts, negatives, weight
     syn1 = weights[1]
 
     inputs_syn0 = torch.index_select(
-        syn0, 0, torch.from_numpy(np.array(input)))
-    true_syn1 = torch.index_select(syn1, 0, torch.from_numpy(np.array(label)))
+        syn0, 0, torch.from_numpy(np.array(input)).cuda())
+    true_syn1 = torch.index_select(syn1, 0, torch.from_numpy(np.array(label)).cuda())
 
     true_logits = torch.sum(torch.multiply(inputs_syn0, true_syn1), dim=1)
     true_logits.requires_grad_()
@@ -154,12 +154,12 @@ def _negative_sampling_loss_torch(input, label, batch_size, unigram_counts, nega
     sampled_values = split_given_size(sampled_values, batch_size)
     sampled_values = np.array(
         [x for x in sampled_values if len(x) == batch_size])
-    sampled_values = torch.from_numpy(sampled_values)
+    sampled_values = torch.from_numpy(sampled_values).cuda()
     #sampled_mat = torch.reshape(sampled_values, (batch_size, negatives))
 
     inputs_syn0 = torch.index_select(
-        syn0, 0, torch.from_numpy(np.array(input)))
-    true_syn1 = torch.index_select(syn1, 0, torch.from_numpy(np.array(label)))
+        syn0, 0, torch.from_numpy(np.array(input)).cuda())
+    true_syn1 = torch.index_select(syn1, 0, torch.from_numpy(np.array(label)).cuda())
 
     #sampled_syn1 = syn1[sampled_values]
     list_sampled_syn1 = []
