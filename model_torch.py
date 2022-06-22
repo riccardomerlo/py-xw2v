@@ -158,6 +158,10 @@ class Word2VecModel(torch.nn.Module):
         """
         # average_loss = 0. #TODO
         optimizer = torch.optim.SGD(self.parameters(), lr=self._alpha)
+        
+        log_per_steps = 1000
+        
+        print('Total number of steps: ', len(data))
 
         for step, training_point in enumerate(data):
             inputs = [x[0] for x in training_point]
@@ -173,7 +177,10 @@ class Word2VecModel(torch.nn.Module):
 
             # update gradients
             optimizer.step()
-            #log_per_steps = 100
+            
+            if step % log_per_steps == 0:
+                print('step:', step)
+
         print("Training completed")
 
         # get weights matrixes as numpy array
