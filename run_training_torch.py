@@ -1,6 +1,9 @@
 from model_torch import Word2VecModel
 from dataset_torch import create_skipgram, read_corpus
 
+torch.set_default_tensor_type(torch.cuda.FloatTensor if torch.cuda.is_available() 
+                                                     else torch.FloatTensor)
+
 """
 Define CONSTANTS
 """
