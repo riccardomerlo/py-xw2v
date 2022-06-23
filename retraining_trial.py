@@ -11,6 +11,7 @@ from word_vectors import WordVectors
 import pandas as pd
 import torch
 import random
+from after_training_torch import get_sim_matrix
 
 S = ["technology"]
 T = ["art"]
