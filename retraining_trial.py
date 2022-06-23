@@ -11,12 +11,14 @@ from word_vectors import WordVectors
 import pandas as pd
 import torch
 import random
-from after_training_torch import get_sim_matrix
+from after_training_torch import get_sim_matrix, get_emb_og
 
 S = ["technology"]
 T = ["art"]
 A = ["man", "he", "him", "his"]
 B = ["woman", "she", "her"]
+
+WEATLIST = S+T+A+B
 
 syn0 = np.load('syn0_final_torch.npy')
 syn1 = np.load('syn1_final_torch.npy')
