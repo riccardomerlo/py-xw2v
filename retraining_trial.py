@@ -39,6 +39,17 @@ with open('./corpus/nyt_articles_31.txt', 'r') as f:
   
 flat_data = [x for xs in data for x in xs]
 
+most_common_words = []
+un = unigram_counts.copy()
+count = 50
+while True:
+  if len(most_common_words) == 50:
+    break
+  idx = np.argmax(un)
+  if inv_vocab[idx] not in WEATLIST.copy():
+    most_common_words.append(inv_vocab[idx])
+  un.pop(idx)
+
 def split_given_size(a, size):
     return np.split(a, np.arange(size, len(a), size))
   
