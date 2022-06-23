@@ -10,9 +10,15 @@ import statistics
 from word_vectors import WordVectors                                                                                
 import pandas as pd
 import torch
+import random
 
-syn0 = np.load('/content/syn0_final_torch.npy')
-syn1 = np.load('/content/syn1_final_torch.npy')
+S = ["technology"]
+T = ["art"]
+A = ["man", "he", "him", "his"]
+B = ["woman", "she", "her"]
+
+syn0 = np.load('syn0_final_torch.npy')
+syn1 = np.load('syn1_final_torch.npy')
 
 with open("data.pkl", "rb") as f:
   data = pickle.load(f)
