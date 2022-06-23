@@ -37,6 +37,10 @@ Create DATASET
 data, unigram_counts, vocab, inv_vocab = create_skipgram(
     text, WINDOW_SIZE, WEATLIST.copy(), MIN_FREQ, SAMPLING_RATE, EPOCHS, BATCH_SIZE)
 
+with open('vocab.txt', 'w') as f:
+  for w in vocab:
+    f.write(w + '\n')
+
 """
 Create MODEL
 """
