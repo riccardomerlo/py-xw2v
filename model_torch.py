@@ -15,9 +15,8 @@ def fixed_unigram_candidate_sampler(
         unigrams: List[Union[int, float]],
         distortion: float = 1.):
     
-    print(true_classes)
     if isinstance(true_classes, torch.Tensor):
-        true_classes = true_classes.detach().numpy()
+        true_classes = true_classes.cpu().detach().numpy()
     if true_classes.shape[0] != num_samples:
         raise ValueError(
             'true_classes must be a 2D matrix with shape (num_samples, num_true)')
@@ -158,6 +157,10 @@ class Word2VecModel(torch.nn.Module):
         """
         # average_loss = 0. #TODO
         optimizer = torch.optim.SGD(self.parameters(), lr=self._alpha)
+        
+        log_per_steps = 1000
+        
+        print('Total number of steps: ', len(data))
 
         for step, training_point in enumerate(data):
             inputs = [x[0] for x in training_point]
@@ -173,7 +176,10 @@ class Word2VecModel(torch.nn.Module):
 
             # update gradients
             optimizer.step()
-            #log_per_steps = 100
+            
+            if step % log_per_steps == 0:
+                print('step:', step)
+
         print("Training completed")
 
         # get weights matrixes as numpy array
