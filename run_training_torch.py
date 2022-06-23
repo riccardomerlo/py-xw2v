@@ -1,6 +1,7 @@
 from model_torch import Word2VecModel
 from dataset_torch import create_skipgram, read_corpus
 import torch
+import pickle
 
 torch.set_default_tensor_type(torch.cuda.FloatTensor if torch.cuda.is_available() 
                                                      else torch.FloatTensor)
@@ -34,6 +35,21 @@ Create DATASET
 """
 data, unigram_counts, vocab, inv_vocab = create_skipgram(
     text, WINDOW_SIZE, WEATLIST.copy(), MIN_FREQ, SAMPLING_RATE, EPOCHS, BATCH_SIZE)
+
+
+with open('data.pkl', 'wb') as f:
+  pickle.dump(data, f)
+
+with open('unigram_counts.pkl', 'wb') as f:
+  pickle.dump(unigram_counts, f)
+
+with open('vocab.pkl', 'wb') as f:
+  pickle.dump(vocab, f)
+
+with open('inv_vocab.pkl', 'wb') as f:
+  pickle.dump(inv_vocab, f)
+
+
 
 """
 Create MODEL
