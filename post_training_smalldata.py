@@ -198,12 +198,12 @@ for sent_id in text_ids:
       if first==True: # I consider a sentence if it has at least one occurrence of WEAT words
 
         # settings
-        BATCH_SIZE = 256
+        BATCH_SIZE = 32
         NEGATIVES = 5
-        EPOCHS = 3
+        EPOCHS = 2
         SAMPLING_RATE = 1E-3
-        MIN_FREQ = 10
-        WINDOW_SIZE = 5
+        MIN_FREQ = 1
+        WINDOW_SIZE = 3
         LEARNING_RATE = 1E-3
 
         log_per_steps= 1000#10000  # Every `log_per_steps` steps to log the value of loss to be minimized.
