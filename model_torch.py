@@ -187,7 +187,7 @@ class Word2VecModel(torch.nn.Module):
         syn1_final = self.syn1.cpu().detach().numpy()
 
         if save:
-            np.save('syn0_final_torch', syn0_final)
-            np.save('syn1_final_torch', syn1_final)
+            np.save('syn0_final_torch_small', syn0_final)
+            np.save('syn1_final_torch_small', syn1_final)
 
         return [syn0_final, syn1_final]
