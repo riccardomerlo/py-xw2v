@@ -136,8 +136,8 @@ def _negative_sampling_loss_torch(input, label, batch_size, unigram_counts, nega
         Returns:
           loss: float tensor of shape [batch_size, vocab_size].
         """
-        syn0 = weights[0]
-        syn1 = weights[1]
+        syn0 = weights[0].cuda()
+        syn1 = weights[1].cuda()
 
         torch.manual_seed(np.array(input).mean())  # TODO change seed?
         true_classes_array = torch.unsqueeze(
