@@ -70,8 +70,7 @@ def create_skipgram(text, window, whitelist=[], min_freq=1, sampling_rate=1e-3, 
     for nsent, sentence in enumerate(new_text):
         for i, t in enumerate(sentence):
             contexts = list(range(i-window, i + window+1))
-            contexts = [c for c in contexts if c >=
-                        0 and c != i and c < len(sentence)]
+            contexts = [c for c in contexts if c >=0 and c != i and c < len(sentence)]
             for c in contexts:
                 data.append([vectorizer.vocabulary_[t],
                              vectorizer.vocabulary_[sentence[c]], nsent])
