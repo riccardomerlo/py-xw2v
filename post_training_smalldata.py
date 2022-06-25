@@ -57,8 +57,9 @@ print('length of dataset: ', len(data))
 data_post = data[:int(len(data)/EPOCHS)]
 print(data_post)
 
-flat_data = [x for xs in data for x in xs]
+flat_data = [x for xs in data_post for x in xs]
 print(len(flat_data))
+print(flat_data[0])
 
 #data, unigram_counts, vocab, inv_vocab = create_skipgram(text, WINDOW_SIZE, WEATLIST, MIN_FREQ, SAMPLING_RATE, 1, 1)
 
