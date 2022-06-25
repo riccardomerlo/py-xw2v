@@ -62,7 +62,6 @@ def create_skipgram(text, window, whitelist=[], min_freq=1, sampling_rate=1e-3, 
     """
     data = []
     vocab = get_vocab(text)
-    print(len(vocab))
     text, new_text = apply_reduction(
         text, vocab, whitelist.copy(), min_freq, sampling_rate)
     vectorizer = CountVectorizer(
@@ -75,12 +74,9 @@ def create_skipgram(text, window, whitelist=[], min_freq=1, sampling_rate=1e-3, 
             for c in contexts:
                 data.append([vectorizer.vocabulary_[t],
                              vectorizer.vocabulary_[sentence[c]], nsent])
-    print(len(data))
     data = split_given_size(data, batch_size)
     data = [x for x in data if len(x) == batch_size]
-    print(len(data))
     data = data * epochs
-    print(len(data))
 
     vcount = get_vocab(text)
     vocab = dict(sorted(vectorizer.vocabulary_.items(),
