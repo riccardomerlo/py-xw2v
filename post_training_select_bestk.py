@@ -53,8 +53,8 @@ with open("inv_vocab.pkl", "rb") as iv:
 text = read_corpus('./corpus/nyt_articles_v2.txt')
 
 vocab_words = [key for key in vocab]
-
-data_post = data[:int(len(data))/EPOCHS]
+print('length of dataset: ', len(data))
+data_post = data[:int(len(data)/EPOCHS)]
 
 flat_data = [x for xs in data for x in xs]
 
