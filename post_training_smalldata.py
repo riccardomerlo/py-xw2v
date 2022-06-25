@@ -11,6 +11,7 @@ import torch
 
 import matplotlib.pyplot as plt
 import seaborn as sns
+import random
 
 from dataset_torch import create_skipgram, read_corpus
 from model_torch import Word2VecModel
