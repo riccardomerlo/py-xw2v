@@ -19,7 +19,7 @@ MIN_FREQ = 10
 WINDOW_SIZE = 5
 LEARNING_RATE = 1E-3
 # liste_termini_weat
-S = ["science", "technology", "physics", "chemistry", "einstein", "nasa", "experimeny",
+S = ["science", "technology", "physics", "chemistry", "einstein", "nasa", 
     "experiment", "astronomy"]
 T = ["poetry", "art", "shakespeare", "dance", "literature", "novel", "symphony", "drama"]
 A = ["male", "man", "boy", "brother", "he", "him", "his", "son"]
