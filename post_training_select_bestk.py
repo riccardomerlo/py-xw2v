@@ -57,7 +57,7 @@ vocab_words = [key for key in vocab]
 print('length of dataset: ', len(data))
 data_post = data[:int(len(data)/EPOCHS)]
 
-flat_data = [x for xs in data for x in xs]
+flat_data = [x for xs in data_post for x in xs]
 
 #data, unigram_counts, vocab, inv_vocab = create_skipgram(text, WINDOW_SIZE, WEATLIST, MIN_FREQ, SAMPLING_RATE, 1, 1)
 
@@ -79,8 +79,8 @@ for word in S+T+A+B:
   list_index_weat.append(vocab[word])
 
 tot_count = 0
-for step, training_point in enumerate(data_post):
-  inputs = training_point[0][0]
+for step, training_point in enumerate(flat_data):
+  inputs = training_point[0]
   if inputs in list_index_weat:
     tot_count+=1
 print("Tot. number of inputs to consider: ", tot_count)
@@ -98,7 +98,7 @@ print("post training for k: ", k)
 diz_gradients_0 = {} # dictionary like {(inputs, labels, nsent): gradient}
 hessian_diz_0 = {} # dictionary like {inputs: hessian}
 
-post_training(k, vocab, inv_vocab, data_post, 1, unigram_counts, None, list_index_weat, _true_loss_torch, weights, diz_gradients_0, hessian_diz_0)
+post_training(k, vocab, inv_vocab, flat_data, 1, unigram_counts, None, list_index_weat, _true_loss_torch, weights, diz_gradients_0, hessian_diz_0)
 
 """### k=5 like in training"""
 
@@ -108,7 +108,7 @@ print("post training for k: ", k)
 diz_gradients_5 = {} # dictionary like {(inputs, labels, nsent): gradient}
 hessian_diz_5 = {} # dictionary like {inputs: hessian}
 
-post_training(k, vocab, inv_vocab, data_post, 1, unigram_counts, k, list_index_weat, _negative_sampling_loss_torch, weights, diz_gradients_5, hessian_diz_5)
+post_training(k, vocab, inv_vocab, flat_data, 1, unigram_counts, k, list_index_weat, _negative_sampling_loss_torch, weights, diz_gradients_5, hessian_diz_5)
 
 """### k=V-1"""
 
@@ -120,7 +120,7 @@ print("post training for k: ", k)
 diz_gradients_V = {} # dictionary like {(inputs, labels, nsent): gradient}
 hessian_diz_V = {} # dictionary like {inputs: hessian}
 
-post_training(k, vocab, inv_vocab, data_post, 1, unigram_counts, None, list_index_weat, _full_loss_torch, weights, diz_gradients_V, hessian_diz_V)
+post_training(k, vocab, inv_vocab, flat_data, 1, unigram_counts, None, list_index_weat, _full_loss_torch, weights, diz_gradients_V, hessian_diz_V)
 
 """# Build the approximation for the embedding
 
