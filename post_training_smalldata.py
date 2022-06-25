@@ -54,6 +54,7 @@ text = read_corpus('./corpus/nyt_articles_31.txt')
 vocab_words = [key for key in vocab]
 print('length of dataset: ', len(data))
 data_post = data[:int(len(data)/EPOCHS)]
+print(data_post)
 
 flat_data = [x for xs in data for x in xs]
 
