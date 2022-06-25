@@ -29,15 +29,12 @@ WEATLIST = S+T+A+B
 Read CORPUS
 """
 text = read_corpus('./corpus/nyt_articles_31.txt')
-print(text)
 
 """
 Create DATASET
 """
 data, unigram_counts, vocab, inv_vocab = create_skipgram(
     text, WINDOW_SIZE, WEATLIST.copy(), MIN_FREQ, SAMPLING_RATE, EPOCHS, BATCH_SIZE)
-
-print(unigram_counts)
 
 
 with open('data_small.pkl', 'wb') as f:
