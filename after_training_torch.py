@@ -139,9 +139,9 @@ def _negative_sampling_loss_torch(input, label, batch_size, unigram_counts, nega
         syn0 = weights[0]
         syn1 = weights[1]
 
-        torch.manual_seed(np.array(inputs).mean())  # TODO change seed?
+        torch.manual_seed(np.array(input).mean())  # TODO change seed?
         true_classes_array = torch.unsqueeze(
-            torch.tensor(np.repeat(labels, negatives)), 1)
+            torch.tensor(np.repeat(label, negatives)), 1)
         # print(true_classes_array.shape)
         sampled_values = fixed_unigram_candidate_sampler(true_classes=true_classes_array,
                                                          num_samples=negatives*batch_size,
@@ -154,9 +154,9 @@ def _negative_sampling_loss_torch(input, label, batch_size, unigram_counts, nega
         # sampled_mat = torch.reshape(sampled_values, (batch_size, negatives))
 
         inputs_syn0 = torch.index_select(
-            syn0, 0, torch.from_numpy(np.array(inputs)).cuda())
+            syn0, 0, torch.from_numpy(np.array(input)).cuda())
         true_syn1 = torch.index_select(
-            syn1, 0, torch.from_numpy(np.array(labels)).cuda())
+            syn1, 0, torch.from_numpy(np.array(label)).cuda())
 
         # sampled_syn1 = syn1[sampled_values]
         list_sampled_syn1 = []
