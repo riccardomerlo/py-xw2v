@@ -188,11 +188,11 @@ def post_training(k, vocab, inv_vocab, dataset, batch_size, unigram_counts, nega
     vocab_len = len(vocab)
     i = 0
     for step, training_point in enumerate(dataset):
-        input = training_point[0][0]
+        input = training_point[0]
         if input in list_index_weat:
-            input = training_point[0][0]
-            label = training_point[0][1]
-            nsent = training_point[0][2]
+            input = training_point[0]
+            label = training_point[1]
+            nsent = training_point[2]
 
             loss = loss_func(input, label, batch_size,
                              unigram_counts, negatives, weights, vocab_len)
