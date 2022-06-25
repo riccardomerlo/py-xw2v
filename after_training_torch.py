@@ -59,8 +59,8 @@ def _full_loss_torch(input, label, batch_size, unigram_counts, negatives, weight
     """
     vocab = set(range(vocab_len))
 
-    syn0 = weights[0]
-    syn1 = weights[1]
+    syn0 = weights[0].cuda()
+    syn1 = weights[1].cuda()
 
     contexts = []
 
@@ -106,8 +106,8 @@ def _true_loss_torch(input, label, batch_size, unigram_counts, negatives, weight
     """
     vocab = set(range(vocab_len))
 
-    syn0 = weights[0]
-    syn1 = weights[1]
+    syn0 = weights[0].cuda()
+    syn1 = weights[1].cuda()
 
     inputs_syn0 = torch.index_select(
         syn0, 0, torch.from_numpy(np.array(input)).cuda())
@@ -124,68 +124,65 @@ def _true_loss_torch(input, label, batch_size, unigram_counts, negatives, weight
     loss = true_cross_entropy.unsqueeze(0)
     return loss
 
-
 def _negative_sampling_loss_torch(input, label, batch_size, unigram_counts, negatives, weights, vocab_len):
-    """Builds the negative sampling loss.
+        """Builds the negative sampling loss.
+        Args:
+          input: int of shape [batch_size] => 1 (skip_gram)
+          label: int of shape [batch_size] => 1
+          batch_size: batch size chosen
+          unigram_counts: list of sorted counts of words in vocab
+          negatives: number of negatives to consider
+          weights: list of weights, syn0 and syn1 matrices
+        Returns:
+          loss: float tensor of shape [batch_size, vocab_size].
+        """
+        syn0 = weights[0]
+        syn1 = weights[1]
 
-    Args:
-      input: int of shape [batch_size] => 1 (skip_gram)
-      label: int of shape [batch_size] => 1
-      batch_size: batch size chosen
-      unigram_counts: list of sorted counts of words in vocab
-      negatives: number of negatives to consider
-      weights: list of weights, syn0 and syn1 matrices
+        torch.manual_seed(np.array(inputs).mean())  # TODO change seed?
+        true_classes_array = torch.unsqueeze(
+            torch.tensor(np.repeat(labels, negatives)), 1)
+        # print(true_classes_array.shape)
+        sampled_values = fixed_unigram_candidate_sampler(true_classes=true_classes_array,
+                                                         num_samples=negatives*batch_size,
+                                                         unigrams=unigram_counts,
+                                                         distortion=0.75)
+        sampled_values = split_given_size(sampled_values, batch_size)
+        sampled_values = np.array(
+            [x for x in sampled_values if len(x) == batch_size])
+        sampled_values = torch.from_numpy(sampled_values).cuda()
+        # sampled_mat = torch.reshape(sampled_values, (batch_size, negatives))
 
-    Returns:
-      loss: float tensor of shape [batch_size, vocab_size].
-    """
+        inputs_syn0 = torch.index_select(
+            syn0, 0, torch.from_numpy(np.array(inputs)).cuda())
+        true_syn1 = torch.index_select(
+            syn1, 0, torch.from_numpy(np.array(labels)).cuda())
 
-    syn0 = weights[0]
-    syn1 = weights[1]
+        # sampled_syn1 = syn1[sampled_values]
+        list_sampled_syn1 = []
+        for batch in sampled_values:
+            sampled_syn1_batch = torch.index_select(syn1, 0, batch)
+            list_sampled_syn1.append(sampled_syn1_batch)
 
-    torch.manual_seed(np.array(input).mean())
-    true_classes_array = torch.unsqueeze(
-        torch.tensor(np.repeat(label, negatives)), 1)
-    # print(true_classes_array.shape)
-    sampled_values = fixed_unigram_candidate_sampler(true_classes=true_classes_array,
-                                                     num_samples=negatives*batch_size,
-                                                     unigrams=unigram_counts,
-                                                     distortion=0.75)
-    sampled_values = split_given_size(sampled_values, batch_size)
-    sampled_values = np.array(
-        [x for x in sampled_values if len(x) == batch_size])
-    sampled_values = torch.from_numpy(sampled_values).cuda()
-    #sampled_mat = torch.reshape(sampled_values, (batch_size, negatives))
+        sampled_syn1 = torch.stack(list_sampled_syn1, 0)
 
-    inputs_syn0 = torch.index_select(
-        syn0, 0, torch.from_numpy(np.array(input)).cuda())
-    true_syn1 = torch.index_select(syn1, 0, torch.from_numpy(np.array(label)).cuda())
+        true_logits = torch.sum(torch.multiply(inputs_syn0, true_syn1), dim=1)
+        true_logits.requires_grad_()
 
-    #sampled_syn1 = syn1[sampled_values]
-    list_sampled_syn1 = []
-    for batch in sampled_values:
-        sampled_syn1_batch = torch.index_select(syn1, 0, batch)
-        list_sampled_syn1.append(sampled_syn1_batch)
+        sampled_logits = torch.einsum('ijk,ikl->il', inputs_syn0.unsqueeze(1),
+                                      sampled_syn1.permute(1, 2, 0))
+        sampled_logits.requires_grad_()
 
-    sampled_syn1 = torch.stack(list_sampled_syn1, 0)
+        loss = torch.nn.BCEWithLogitsLoss(reduction='none')
 
-    true_logits = torch.sum(torch.multiply(inputs_syn0, true_syn1), dim=1)
-    true_logits.requires_grad_()
+        true_cross_entropy = loss(true_logits, torch.ones_like(true_logits))
+        sampled_cross_entropy = loss(
+            sampled_logits, torch.zeros_like(sampled_logits))
 
-    sampled_logits = torch.einsum('ijk,ikl->il', inputs_syn0.unsqueeze(1),
-                                  sampled_syn1.permute(1, 2, 0))
-    sampled_logits.requires_grad_()
-
-    loss = torch.nn.BCEWithLogitsLoss(reduction='none')
-
-    true_cross_entropy = loss(true_logits, torch.ones_like(true_logits))
-    sampled_cross_entropy = loss(
-        sampled_logits, torch.zeros_like(sampled_logits))
-
-    loss = torch.concat(
-        [true_cross_entropy.unsqueeze(1), sampled_cross_entropy], dim=1)
-    return loss
-
+        loss = torch.concat(
+            [true_cross_entropy.unsqueeze(1), sampled_cross_entropy], dim=1)
+        return loss
+    
 
 def post_training(k, vocab, inv_vocab, dataset, batch_size, unigram_counts, negatives, list_index_weat, loss_func, weights, diz_gradients, hessian_diz):
     vocab_len = len(vocab)
