@@ -58,8 +58,6 @@ data_post = data[:int(len(data)/EPOCHS)]
 print(data_post)
 
 flat_data = [x for xs in data_post for x in xs]
-print(len(flat_data))
-print(flat_data[0])
 
 #data, unigram_counts, vocab, inv_vocab = create_skipgram(text, WINDOW_SIZE, WEATLIST, MIN_FREQ, SAMPLING_RATE, 1, 1)
 
@@ -82,7 +80,7 @@ for word in S+T+A+B:
 
 tot_count = 0
 for step, training_point in enumerate(flat_data):
-  inputs = training_point[0][0]
+  inputs = training_point[0]
   if inputs in list_index_weat:
     tot_count+=1
 print("Tot. number of inputs to consider: ", tot_count)
