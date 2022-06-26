@@ -131,7 +131,6 @@ post_training(k, vocab, inv_vocab, flat_data, 1, unigram_counts, None, list_inde
 
 syn0_final = np.load('syn0_final_torch.npy') # actually this weight matrix is the same for each value of k because it's the one obtained during training
 wv = WordVectors(syn0_final, vocab_words)
-vocab = vocab_words
 
 """### Compute similarity matrices
 
@@ -193,7 +192,7 @@ Re-training should be done on corpus without one sentence, so we need to re-defi
 """
 
 random.seed(0)
-text_ids = random.sample(range(len(text)), 10)
+text_ids = random.sample(range(len(text)), 100)
 
 list_sim_sent_retrain = []
 for sent_id in text_ids:
