@@ -110,7 +110,7 @@ print("post training for k: ", k)
 diz_gradients_5 = {} # dictionary like {(inputs, labels, nsent): gradient}
 hessian_diz_5 = {} # dictionary like {inputs: hessian}
 
-post_training(k, vocab, inv_vocab, list_onlyweat, BATCH_SIZE, HIDDEN_SIZE, unigram_counts, k, list_index_weat, _negative_sampling_loss_torch, weights, diz_gradients_5, hessian_diz_5)
+post_training_optimized(k, vocab, inv_vocab, list_onlyweat, BATCH_SIZE, HIDDEN_SIZE, unigram_counts, k, list_index_weat, _negative_sampling_loss_torch, weights, diz_gradients_5, hessian_diz_5)
 
 """### k=V-1"""
 
@@ -122,7 +122,7 @@ print("post training for k: ", k)
 diz_gradients_V = {} # dictionary like {(inputs, labels, nsent): gradient}
 hessian_diz_V = {} # dictionary like {inputs: hessian}
 
-post_training(k, vocab, inv_vocab, list_onlyweat, BATCH_SIZE, HIDDEN_SIZE, unigram_counts, None, list_index_weat, _full_loss_torch, weights, diz_gradients_V, hessian_diz_V)
+post_training_optimized(k, vocab, inv_vocab, list_onlyweat, BATCH_SIZE, HIDDEN_SIZE, unigram_counts, None, list_index_weat, _full_loss_torch, weights, diz_gradients_V, hessian_diz_V)
 
 """# Build the approximation for the embedding
 # Results
