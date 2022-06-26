@@ -15,7 +15,7 @@ import random
 
 from dataset_torch import create_skipgram, read_corpus, split_given_size
 from model_torch import Word2VecModel
-from after_training_torch import _full_loss_torch, _true_loss_torch, _negative_sampling_loss_torch, post_training, get_sim_matrix, get_sim_perturbed, get_emb_og, get_emb_pert, compute_corr, get_variation_sim_matrix, effect_size, get_perturbed_emb_sent
+from after_training_torch import _full_loss_torch, _true_loss_torch, _negative_sampling_loss_torch, post_training, post_training_optimized, get_sim_matrix, get_sim_perturbed, get_emb_og, get_emb_pert, compute_corr, get_variation_sim_matrix, effect_size, get_perturbed_emb_sent
 
 
 BATCH_SIZE = 256
@@ -25,6 +25,7 @@ SAMPLING_RATE = 1E-3
 MIN_FREQ = 10
 WINDOW_SIZE = 5
 LEARNING_RATE = 1E-3
+HIDDEN_SIZE = 300
 # liste_termini_weat
 S = ["science", "technology", "physics", "chemistry", "einstein", "nasa", 
     "experiment", "astronomy"]
@@ -54,10 +55,10 @@ with open("inv_vocab.pkl", "rb") as iv:
 text = read_corpus('./corpus/nyt_articles_v2.txt')
 
 vocab_words = [key for key in vocab]
-print('length of dataset: ', len(data))
 data_post = data[:int(len(data)/EPOCHS)]
+print('length of dataset: ', len(data_post))
 
-flat_data = [x for xs in data_post for x in xs]
+#flat_data = [x for xs in data_post for x in xs]
 
 #data, unigram_counts, vocab, inv_vocab = create_skipgram(text, WINDOW_SIZE, WEATLIST, MIN_FREQ, SAMPLING_RATE, 1, 1)
 
@@ -78,12 +79,15 @@ list_index_weat = []
 for word in S+T+A+B:
   list_index_weat.append(vocab[word])
 
-tot_count = 0
-for step, training_point in enumerate(flat_data):
-  inputs = training_point[0]
-  if inputs in list_index_weat:
-    tot_count+=1
-print("Tot. number of inputs to consider: ", tot_count)
+list_onlyweat = []
+for step, training_point in enumerate(data_post):
+  inputs = [x[0] for x in training_point]
+  first=True
+  for word in list_index_weat:
+    if word in inputs and first==True: # keep a batch if it contains at least one weat word 
+      list_onlyweat.append(training_point)   
+      first=False  
+print("Tot. number of inputs to consider: ", len(list_onlyweat))
 
 weights = [torch.from_numpy(syn0).requires_grad_(), torch.from_numpy(syn1).requires_grad_()]
 
@@ -98,7 +102,7 @@ print("post training for k: ", k)
 diz_gradients_0 = {} # dictionary like {(inputs, labels, nsent): gradient}
 hessian_diz_0 = {} # dictionary like {inputs: hessian}
 
-post_training(k, vocab, inv_vocab, flat_data, 1, unigram_counts, None, list_index_weat, _true_loss_torch, weights, diz_gradients_0, hessian_diz_0)
+post_training_optimized(k, vocab, inv_vocab, list_onlyweat, BATCH_SIZE, HIDDEN_SIZE, unigram_counts, None, list_index_weat, _true_loss_torch, weights, diz_gradients_0, hessian_diz_0)
 
 """### k=5 like in training"""
 
@@ -108,7 +112,7 @@ print("post training for k: ", k)
 diz_gradients_5 = {} # dictionary like {(inputs, labels, nsent): gradient}
 hessian_diz_5 = {} # dictionary like {inputs: hessian}
 
-post_training(k, vocab, inv_vocab, flat_data, 1, unigram_counts, k, list_index_weat, _negative_sampling_loss_torch, weights, diz_gradients_5, hessian_diz_5)
+post_training_optimized(k, vocab, inv_vocab, list_onlyweat, BATCH_SIZE, HIDDEN_SIZE, unigram_counts, None, list_index_weat, _true_loss_torch, weights, diz_gradients_5, hessian_diz_5)
 
 """### k=V-1"""
 
@@ -120,7 +124,7 @@ print("post training for k: ", k)
 diz_gradients_V = {} # dictionary like {(inputs, labels, nsent): gradient}
 hessian_diz_V = {} # dictionary like {inputs: hessian}
 
-post_training(k, vocab, inv_vocab, flat_data, 1, unigram_counts, None, list_index_weat, _full_loss_torch, weights, diz_gradients_V, hessian_diz_V)
+post_training_optimized(k, vocab, inv_vocab, list_onlyweat, BATCH_SIZE, HIDDEN_SIZE, unigram_counts, None, list_index_weat, _true_loss_torch, weights, diz_gradients_V, hessian_diz_V)
 
 """# Build the approximation for the embedding
 
