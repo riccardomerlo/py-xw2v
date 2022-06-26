@@ -236,7 +236,61 @@ def post_training(k, vocab, inv_vocab, dataset, batch_size, unigram_counts, nega
     with open('dict_hessians_'+str(k)+'.pickle', 'wb') as handle_hes:
         pickle.dump(hessian_diz, handle_hes, protocol=pickle.HIGHEST_PROTOCOL)
 
+        
+def post_training_optimized(k, vocab, inv_vocab, dataset, batch_size, hidden_size, unigram_counts, negatives, list_index_weat, loss_func, weights, diz_gradients, hessian_diz):
+    vocab_len = len(vocab)
+    count = 0
+    for step, training_point in enumerate(dataset):
+        inputs = [x[0] for x in training_point]
+        labels = [x[1] for x in training_point]
+        nsent = [x[2] for x in training_point]
 
+        loss = loss_func(inputs, labels, batch_size,
+                          unigram_counts, negatives, weights, vocab_len)
+        grad = torch.autograd.grad(
+            loss.sum(), weights[0], create_graph=True, retain_graph=True)[0]
+
+        # hessian computation
+        hessian = torch.zeros(batch_size, hidden_size, hidden_size)
+        for n in range(batch_size):
+          if inputs[n] in list_index_weat:
+            for i in range(hidden_size):
+              hessian[n][i] = torch.autograd.grad(grad[n][i], weights[0],
+                                                        create_graph=True, retain_graph=True)[0][n]
+          else:
+            for i in range(hidden_size):
+              hessian[n][i] = 0
+        
+        # save grad and hessian
+        for n in range(batch_size):
+          if inputs[n] in list_index_weat:
+            grad_target = grad.detach().numpy()[inputs[n]]
+            hess_target = hessian[n].cpu().detach().numpy()
+
+            diz_key = (inv_vocab[inputs[n]], inv_vocab[labels[n]], nsent[n])
+
+            if diz_key not in diz_gradients:
+              diz_gradients[diz_key] = grad_target.copy()
+            else:
+              diz_gradients[diz_key] += grad_target.copy()
+        
+            if inv_vocab[inputs[n]] not in hessian_diz:
+                hessian_diz[inv_vocab[inputs[n]]] = hess_target.copy()
+            else:
+                hessian_diz[inv_vocab[inputs[n]]] += hess_target.copy()
+
+        count += 1
+        if count % 10 == 0:
+            print(count)  # progress
+
+    with open('dict_gradients_'+str(k)+'.pickle', 'wb') as handle_grad:
+        pickle.dump(diz_gradients, handle_grad,
+                    protocol=pickle.HIGHEST_PROTOCOL)
+
+    with open('dict_hessians_'+str(k)+'.pickle', 'wb') as handle_hes:
+        pickle.dump(hessian_diz, handle_hes, protocol=pickle.HIGHEST_PROTOCOL)
+       
+        
 def compute_g(A, B, c, get_emb, wv):
     """
     compute g measure which is part of effect size.
