@@ -15,7 +15,7 @@ import random
 
 from dataset_torch import create_skipgram, read_corpus, split_given_size
 from model_torch import Word2VecModel
-from after_training_torch import _full_loss_torch, _true_loss_torch, _negative_sampling_loss_torch, post_training, get_sim_matrix, get_sim_perturbed, get_emb_og, get_emb_pert, compute_corr, get_variation_sim_matrix, effect_size, get_perturbed_emb_sent
+from after_training_torch import _full_loss_torch, _true_loss_torch, _negative_sampling_loss_torch, post_training, post_training_optimized, get_sim_matrix, get_sim_perturbed, get_emb_og, get_emb_pert, compute_corr, get_variation_sim_matrix, effect_size, get_perturbed_emb_sent
 
 
 BATCH_SIZE = 32
