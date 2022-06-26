@@ -25,6 +25,7 @@ SAMPLING_RATE = 1E-3
 MIN_FREQ = 1
 WINDOW_SIZE = 3
 LEARNING_RATE = 1E-3
+HIDDEN_SIZE = 300
 # liste_termini_weat
 S = ["technology"]
 T = ["art"]
