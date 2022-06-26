@@ -55,9 +55,10 @@ text = read_corpus('./corpus/nyt_articles_31.txt')
 
 vocab_words = [key for key in vocab]
 data_post = data[:int(len(data)/EPOCHS)]
-print('length of dataset: ', len(data_post))
+print('number of tuples with batches: ', len(data_post))
 
-#flat_data = [x for xs in data_post for x in xs]
+flat_data = [x for xs in data_post for x in xs]
+print('total number of tuples: ', len(flat_data))
 
 #data, unigram_counts, vocab, inv_vocab = create_skipgram(text, WINDOW_SIZE, WEATLIST, MIN_FREQ, SAMPLING_RATE, 1, 1)
 
@@ -86,7 +87,14 @@ for step, training_point in enumerate(data_post):
     if word in inputs and first==True: # keep a batch if it contains at least one weat word 
       list_onlyweat.append(training_point)   
       first=False  
-print("Tot. number of inputs to consider: ", len(list_onlyweat))
+print("Tot. number of inputs to consider with batches: ", len(list_onlyweat))
+
+count_weat = 0
+for step, training_point in enumerate(flat_data):
+  input = training_point[0]
+  for input in list_index_weat:
+    count_weat+=1
+print("Tot. number of inputs to consider in total (no batches): ", count_weat)
 
 weights = [torch.from_numpy(syn0).requires_grad_(), torch.from_numpy(syn1).requires_grad_()]
 
@@ -100,7 +108,8 @@ print("post training for k: ", k)
 diz_gradients_0 = {} # dictionary like {(inputs, labels, nsent): gradient}
 hessian_diz_0 = {} # dictionary like {inputs: hessian}
 
-post_training_optimized(k, vocab, inv_vocab, list_onlyweat, BATCH_SIZE, HIDDEN_SIZE, unigram_counts, None, list_index_weat, _true_loss_torch, weights, diz_gradients_0, hessian_diz_0)
+#post_training_optimized(k, vocab, inv_vocab, list_onlyweat, BATCH_SIZE, HIDDEN_SIZE, unigram_counts, None, list_index_weat, _true_loss_torch, weights, diz_gradients_0, hessian_diz_0)
+post_training(k, vocab, inv_vocab, flat_data, 1, unigram_counts, None, list_index_weat, _true_loss_torch, weights, diz_gradients_0, hessian_diz_0)
 
 """### k=5 like in training"""
 
@@ -110,7 +119,8 @@ print("post training for k: ", k)
 diz_gradients_5 = {} # dictionary like {(inputs, labels, nsent): gradient}
 hessian_diz_5 = {} # dictionary like {inputs: hessian}
 
-post_training_optimized(k, vocab, inv_vocab, list_onlyweat, BATCH_SIZE, HIDDEN_SIZE, unigram_counts, k, list_index_weat, _negative_sampling_loss_torch, weights, diz_gradients_5, hessian_diz_5)
+#post_training_optimized(k, vocab, inv_vocab, list_onlyweat, BATCH_SIZE, HIDDEN_SIZE, unigram_counts, k, list_index_weat, _negative_sampling_loss_torch, weights, diz_gradients_5, hessian_diz_5)
+post_training(k, vocab, inv_vocab, flat_data, 1, unigram_counts, k, list_index_weat, _negative_sampling_loss_torch, weights, diz_gradients_5, hessian_diz_5)
 
 """### k=V-1"""
 
@@ -122,7 +132,8 @@ print("post training for k: ", k)
 diz_gradients_V = {} # dictionary like {(inputs, labels, nsent): gradient}
 hessian_diz_V = {} # dictionary like {inputs: hessian}
 
-post_training_optimized(k, vocab, inv_vocab, list_onlyweat, BATCH_SIZE, HIDDEN_SIZE, unigram_counts, None, list_index_weat, _full_loss_torch, weights, diz_gradients_V, hessian_diz_V)
+#post_training_optimized(k, vocab, inv_vocab, list_onlyweat, BATCH_SIZE, HIDDEN_SIZE, unigram_counts, None, list_index_weat, _full_loss_torch, weights, diz_gradients_V, hessian_diz_V)
+post_training(k, vocab, inv_vocab, flat_data, 1, unigram_counts, None, list_index_weat, _full_loss_torch, weights, diz_gradients_V, hessian_diz_V)
 
 """# Build the approximation for the embedding
 # Results
