@@ -206,8 +206,8 @@ class Word2VecModel(torch.nn.Module):
                     for c in contexts:
                         #my_vec[t],my_vec[sentence[c]], nsent
 
-                        inputs = my_vec[t]
-                        labels = my_vec[sentence[c]]
+                        inputs = self._vocab[t]
+                        labels = self._vocab[sentence[c]]
                         
                         # reset gradients
                         optimizer.zero_grad()
