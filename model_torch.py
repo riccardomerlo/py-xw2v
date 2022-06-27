@@ -241,4 +241,12 @@ class Word2VecModel(torch.nn.Module):
             np.save('syn0_final_torch', syn0_final)
             np.save('syn1_final_torch', syn1_final)
 
+            with open("vocab.pkl", "wb") as han:
+                pickle.dump(self._vocab, han)
+            with open("inv_vocab.pkl", "wb") as han:
+                pickle.dump(self._inv_vocab, han)
+            with open("unigram_counts.pkl", "wb") as han:
+                pickle.dump(self._unigram_counts, han)
+
+
         return [syn0_final, syn1_final]
