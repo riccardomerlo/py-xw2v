@@ -45,7 +45,6 @@ def fixed_unigram_candidate_sampler(
 class Word2VecModel(torch.nn.Module):
 
     def __init__(self,
-                 unigram_counts,
                  hidden_size=300,
                  batch_size=256,
                  negatives=5,
@@ -54,7 +53,7 @@ class Word2VecModel(torch.nn.Module):
                  random_seed=0):
 
         super(Word2VecModel, self).__init__()
-        self._unigram_counts = unigram_counts
+        
         self._hidden_size = hidden_size
         self._vocab_size = len(unigram_counts)
         self._batch_size = batch_size
