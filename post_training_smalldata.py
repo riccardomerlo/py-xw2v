@@ -92,7 +92,7 @@ print("Tot. number of inputs to consider with batches: ", len(list_onlyweat))
 count_weat = 0
 for step, training_point in enumerate(flat_data):
   input = training_point[0]
-  for input in list_index_weat:
+  if input in list_index_weat:
     count_weat+=1
 print("Tot. number of inputs to consider in total (no batches): ", count_weat)
 
