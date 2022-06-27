@@ -196,7 +196,7 @@ class Word2VecModel(torch.nn.Module):
         
         print('Total number of steps: ', len(self._text))
 
-        for epoch in epochs:
+        for epoch in range(epochs):
             for n_sent, sentence in enumerate(self.get_text()):
                 #sentence = [s for s in sentence if s in to_keep_words]
                 for i, t in enumerate(iter(sentence)):
