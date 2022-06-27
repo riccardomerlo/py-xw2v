@@ -195,6 +195,9 @@ class Word2VecModel(torch.nn.Module):
         log_per_steps = 1000
         
         print('Total number of steps: ', len(self._text))
+        
+        inputs_batch = []
+        labels_batch = []
 
         for epoch in range(epochs):
             for n_sent, sentence in enumerate(self.get_text()):
@@ -206,21 +209,26 @@ class Word2VecModel(torch.nn.Module):
                     for c in contexts:
                         #my_vec[t],my_vec[sentence[c]], nsent
 
-                        inputs = self._vocab[t]
-                        labels = self._vocab[sentence[c]]
+                        inputs_batch.append(self._vocab[t])
+                        labels_batch.append(self._vocab[sentence[c]])
                         
-                        # reset gradients
-                        optimizer.zero_grad()
+                        if len(inputs_batch) == self._batch_size:
 
-                        neg_loss = self._negative_sampling_loss_torch(
-                            inputs, labels, self._batch_size, self._unigram_counts, self._negatives)
-                        neg_loss.sum().backward(create_graph=True, retain_graph=True)
+                            # reset gradients
+                            optimizer.zero_grad()
 
-                        # update gradients
-                        optimizer.step()
-                        
-                        if  n_sent % log_per_steps == 0:
-                            print('sent :', n_sent)
+                            neg_loss = self._negative_sampling_loss_torch(
+                                inputs_batch, labels_batch, self._batch_size, self._unigram_counts, self._negatives)
+                            neg_loss.sum().backward(create_graph=True, retain_graph=True)
+
+                            # update gradients
+                            optimizer.step()
+                            
+                            if  n_sent % log_per_steps == 0:
+                                print('sent :', n_sent)
+
+                            inputs_batch = []
+                            labels_batch = []
 
         print("Training completed")
 
