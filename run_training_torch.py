@@ -74,4 +74,4 @@ word2vec.build_weights()
 """
 Train MODEL
 """
-word2vec.train(EPOCHS, save=True)
+word2vec.train(EPOCHS, WINDOW_SIZE, save=True)

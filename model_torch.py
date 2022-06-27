@@ -182,7 +182,7 @@ class Word2VecModel(torch.nn.Module):
 
 
 
-    def train(self, epochs, save=True):
+    def train(self, epochs, window, save=True):
         """trains model
 
         Returns:
