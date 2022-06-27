@@ -3,7 +3,7 @@ import torch
 import torch.utils.data
 from typing import List, \
     Union
-from dataset_torch import split_given_size
+from dataset_torch import split_given_size, get_vocab, apply_reduction
 
 torch.set_default_tensor_type(torch.cuda.FloatTensor if torch.cuda.is_available() 
                                                      else torch.FloatTensor)
@@ -156,11 +156,17 @@ class Word2VecModel(torch.nn.Module):
         """
         data = []
         vocab = get_vocab(text)
-        text, new_text = apply_reduction(
+        new_vocab, to_remove_words, to_keep_words = apply_reduction(
             text, vocab, whitelist.copy(), min_freq, sampling_rate)
-        vectorizer = CountVectorizer(
-            token_pattern=r"(?u)\b\w+\b", analyzer=lambda x: x)
-        vectorizer.fit_transform(text)
+
+        new_vocab = dict(sorted(new_vocab.items(),key=lambda item: item[1], reverse=False))
+
+        my_vec = {key: i for i, key in enumerate(sorted(new_vocab.keys())) }
+
+        vcount = get_vocab(text)
+        vocab = dict(sorted(vectorizer.vocabulary_.items(),
+                            key=lambda item: item[1], reverse=False))
+        unigram_counts = [vcount[x] for x in vocab]
 
 
         vcount = get_vocab(text)
