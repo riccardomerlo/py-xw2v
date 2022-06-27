@@ -196,8 +196,8 @@ def post_training(k, vocab, inv_vocab, dataset, batch_size, unigram_counts, nega
 
             loss = loss_func(input, label, batch_size,
                              unigram_counts, negatives, weights, vocab_len)
-            loss.sum().backward(
-                inputs=weights[0], create_graph=True, retain_graph=True)
+            #loss.sum().backward(
+            #    inputs=weights[0], create_graph=True, retain_graph=True)
             grad = torch.autograd.grad(
                 loss.sum(), weights[0], create_graph=True, retain_graph=True)[0]
 
