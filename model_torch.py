@@ -163,20 +163,13 @@ class Word2VecModel(torch.nn.Module):
 
         my_vec = {key: i for i, key in enumerate(sorted(new_vocab.keys())) }
 
-        vcount = get_vocab(text)
-        vocab = dict(sorted(vectorizer.vocabulary_.items(),
-                            key=lambda item: item[1], reverse=False))
-        unigram_counts = [vcount[x] for x in vocab]
+        unigram_counts = [new_vocab[x] for x in my_vec]
 
+        inv_vocab = {v: k for k, v in my_vec.items()}
 
-        vcount = get_vocab(text)
-        vocab = dict(sorted(vectorizer.vocabulary_.items(),
-                            key=lambda item: item[1], reverse=False))
-        unigram_counts = [vcount[x] for x in vocab]
-        inv_vocab = {v: k for k, v in vocab.items()}
-
-        self._text = iter(new_text)
-        self._vocab = vocab
+        #un po' lento...
+        self._text = [[s for s in sentence if s in to_keep_words] for sentence in text]
+        self._vocab = my_vec
         self._unigram_counts = unigram_counts
         self._vocab_size = len(unigram_counts)
         self._inv_vocab = inv_vocab
@@ -184,7 +177,7 @@ class Word2VecModel(torch.nn.Module):
     
     def get_text(self):
 
-        return self._text
+        return iter(self._text)
 
 
 
@@ -205,7 +198,7 @@ class Word2VecModel(torch.nn.Module):
 
         for epoch in epochs:
             for n_sent, sentence in enumerate(self.get_text()):
-                sentence = [s for s in sentence if s in to_keep_words]
+                #sentence = [s for s in sentence if s in to_keep_words]
                 for i, t in enumerate(iter(sentence)):
                     contexts = list(range(i-window, i + window+1))
                     contexts = [c for c in contexts if c >=

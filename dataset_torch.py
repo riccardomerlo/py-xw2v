@@ -108,12 +108,8 @@ def create_skipgram(text, window, whitelist=[], min_freq=1, sampling_rate=1e-3, 
     data = [x for x in data if len(x) == batch_size]
     data = data * epochs
 
-    vcount = get_vocab(text)
-    vocab = dict(sorted(vectorizer.vocabulary_.items(),
-                        key=lambda item: item[1], reverse=False))
-    unigram_counts = [vcount[x] for x in vocab]
 
-    return data, unigram_counts, vocab, 
+    return data, unigram_counts, my_vec, {v: k for k, v in my_vec.items()} 
 
 
 def read_corpus(path, min_len = 3):
