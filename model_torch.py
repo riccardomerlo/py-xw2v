@@ -55,15 +55,18 @@ class Word2VecModel(torch.nn.Module):
         super(Word2VecModel, self).__init__()
         
         self._hidden_size = hidden_size
-        self._vocab_size = len(unigram_counts)
         self._batch_size = batch_size
         self._negatives = negatives
         self._power = power
         self._alpha = alpha
         self._random_seed = random_seed
-        self._all_losses = {}
 
-        self._input_size = self._vocab_size
+        
+
+    def build_weights(self):
+        """
+        instance the weights matrix
+        """
 
         # syn0
         torch.manual_seed(self._random_seed)
@@ -73,7 +76,7 @@ class Word2VecModel(torch.nn.Module):
 
         # syn1
         torch.manual_seed(self._random_seed)
-        syn1 = torch.empty(self._input_size, self._hidden_size)
+        syn1 = torch.empty(self._vocab_size, self._hidden_size)
         self.syn1 = torch.nn.Parameter(data=torch.nn.init.uniform_(
             syn1, a=-0.1, b=0.1), requires_grad=True)
 
@@ -169,6 +172,7 @@ class Word2VecModel(torch.nn.Module):
         self._text = iter(new_text)
         self._vocab = vocab
         self._unigram_counts = unigram_counts
+        self._vocab_size = len(unigram_counts)
         self._inv_vocab = inv_vocab
 
     

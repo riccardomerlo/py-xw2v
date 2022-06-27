@@ -54,8 +54,7 @@ Create DATASET
 """
 Create MODEL
 """
-word2vec = Word2VecModel(unigram_counts,
-                         hidden_size=300,
+word2vec = Word2VecModel(hidden_size=300,
                          batch_size=BATCH_SIZE,
                          negatives=NEGATIVES,
                          power=0.75,
@@ -65,6 +64,11 @@ word2vec = Word2VecModel(unigram_counts,
 Build DATASET
 """
 word2vec.build_dataset(text, WEATLIST.copy(), MIN_FREQ, SAMPLING_RATE)
+
+"""
+Build WEIGHTS
+"""
+word2vec.build_weights()
 
 
 """
