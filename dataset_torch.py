@@ -31,25 +31,38 @@ def subsampling(vocab, whitelist=[], rate=0.0001):
     return list(set(new_tokens))
 
 
-def low_freq(vocab, whitelist=[], min_freq=1):
+def high_freq(vocab, whitelist=[], min_freq=1):
     """
     keep words with frequency >= min_freq
     """
     return list(set([x for x in vocab.keys() if vocab[x] >= min_freq] + whitelist.copy()))
 
+def low_freq(vocab, whitelist=[], min_freq=1):
+    """
+    keep words with frequency >= min_freq
+    """
+    return list(set([x for x in vocab.keys() if vocab[x] < min_freq]).difference(set(whitelist.copy())))
 
 def apply_reduction(text, vocab, whitelist, min_freq, sampling_rate):
+    """
+    returns: new_vocab -> vocabolario senza le low freq words
+              to_remove_words -> lista di parole da rimuovere (low freq + subsampling)
+    """
+    _low_freq = low_freq(vocab, whitelist.copy(), min_freq)
+ 
+    new_vocab = vocab.copy()
 
-    high_freq = low_freq(vocab, whitelist.copy(), min_freq)
-
-    new_text = [[x for x in sent if x in high_freq] for sent in text]
-    new_vocab = get_vocab(new_text)
-
+    # new_vocab is the new vocab w/o low freq words
+    for word in _low_freq:
+      new_vocab.pop(word)
+    
     subsamples = subsampling(new_vocab, whitelist.copy(), sampling_rate)
 
-    new_new_text = [[x for x in sent if x in subsamples] for sent in new_text]
+    to_remove_words = subsamples.copy() + _low_freq.copy()
 
-    return new_text, new_new_text
+    to_keep_words = set(new_vocab.keys()).difference(set(to_remove_words))
+    
+    return new_vocab, to_remove_words, to_keep_words
 
 
 def split_given_size(a, size):
@@ -62,18 +75,35 @@ def create_skipgram(text, window, whitelist=[], min_freq=1, sampling_rate=1e-3, 
     """
     data = []
     vocab = get_vocab(text)
-    text, new_text = apply_reduction(
+    new_vocab, to_remove_words, to_keep_words = apply_reduction(
         text, vocab, whitelist.copy(), min_freq, sampling_rate)
-    vectorizer = CountVectorizer(
-        token_pattern=r"(?u)\b\w+\b", analyzer=lambda x: x)
-    vectorizer.fit_transform(text)
-    for nsent, sentence in enumerate(new_text):
-        for i, t in enumerate(sentence):
-            contexts = list(range(i-window, i + window+1))
-            contexts = [c for c in contexts if c >=0 and c != i and c < len(sentence)]
-            for c in contexts:
-                data.append([vectorizer.vocabulary_[t],
-                             vectorizer.vocabulary_[sentence[c]], nsent])
+
+    new_vocab = dict(sorted(new_vocab.items(),key=lambda item: item[1], reverse=False))
+
+    my_vec = {key: i for i, key in enumerate(sorted(new_vocab.keys())) }
+
+    unigram_counts = [new_vocab[x] for x in my_vec]
+
+    #
+    # FIN QUI CI METTE POCO
+    #
+    with open('dataset_pre.txt', 'w') as f:
+      for nsent, sentence in enumerate(text):
+          sentence = [s for s in sentence if s in to_keep_words]
+          for i, t in enumerate(sentence):
+              contexts = list(range(i-window, i + window+1))
+              contexts = [c for c in contexts if c >=
+                          0 and c != i and c < len(sentence)]
+              for c in contexts:
+                  #data.append([my_vec[t],my_vec[sentence[c]], nsent])
+                  f.write('\t'.join([str(my_vec[t]),
+                              str(my_vec[sentence[c]]), str(nsent)]))
+                  f.write('\n')
+            
+                
+          if i > 2:
+            sys.exit(0)
+
     data = split_given_size(data, batch_size)
     data = [x for x in data if len(x) == batch_size]
     data = data * epochs
@@ -83,15 +113,19 @@ def create_skipgram(text, window, whitelist=[], min_freq=1, sampling_rate=1e-3, 
                         key=lambda item: item[1], reverse=False))
     unigram_counts = [vcount[x] for x in vocab]
 
-    return data, unigram_counts, vocab, {v: k for k, v in vocab.items()}
+    return data, unigram_counts, vocab, 
 
 
-def read_corpus(path):
+def read_corpus(path, min_len = 3):
     text = []
+    #cut_min = lambda x: x if len(x) > min_len
     try:
         with open(path, 'r') as f:
-            text = [nltk.tokenize.word_tokenize(
-                x.strip()) for x in f.readlines()]
+            #text = [nltk.tokenize.word_tokenize(x.strip()) for x in f.readlines()]    
+            for x in f.readlines():
+                res = nltk.tokenize.word_tokenize(x.strip())
+                if len(res) > min_len:
+                    text.append(res)
     except Exception as e:
         print(e)
     return text

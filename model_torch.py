@@ -148,7 +148,39 @@ class Word2VecModel(torch.nn.Module):
             [true_cross_entropy.unsqueeze(1), sampled_cross_entropy], dim=1)
         return loss
 
-    def train(self, data, save=True):
+
+    def build_dataset(self, text, whitelist=[], min_freq=1, sampling_rate=1e-3 ):
+        """
+        """
+        data = []
+        vocab = get_vocab(text)
+        text, new_text = apply_reduction(
+            text, vocab, whitelist.copy(), min_freq, sampling_rate)
+        vectorizer = CountVectorizer(
+            token_pattern=r"(?u)\b\w+\b", analyzer=lambda x: x)
+        vectorizer.fit_transform(text)
+
+
+        vcount = get_vocab(text)
+        vocab = dict(sorted(vectorizer.vocabulary_.items(),
+                            key=lambda item: item[1], reverse=False))
+        unigram_counts = [vcount[x] for x in vocab]
+        inv_vocab = {v: k for k, v in vocab.items()}
+
+        self._text = iter(new_text)
+        self._vocab = vocab
+        self._unigram_counts = unigram_counts
+        self._inv_vocab = inv_vocab
+
+    
+    def get_text(self):
+
+        return self._text
+
+
+
+
+    def train(self, data, epochs, save=True):
         """trains model
 
         Returns:
@@ -162,23 +194,31 @@ class Word2VecModel(torch.nn.Module):
         
         print('Total number of steps: ', len(data))
 
-        for step, training_point in enumerate(data):
-            inputs = [x[0] for x in training_point]
-            labels = [x[1] for x in training_point]
-            nsent = [x[2] for x in training_point]
+        for epoch in epochs:
+            for n_sent, sentence in enumerate(self.get_text()):
+                sentence = [s for s in sentence if s in to_keep_words]
+                for i, t in enumerate(iter(sentence)):
+                    contexts = list(range(i-window, i + window+1))
+                    contexts = [c for c in contexts if c >=
+                                0 and c != i and c < len(sentence)]
+                    for c in contexts:
+                        #my_vec[t],my_vec[sentence[c]], nsent
 
-            # reset gradients
-            optimizer.zero_grad()
+                        inputs = my_vec[t]
+                        labels = my_vec[sentence[c]]
+                        
+                        # reset gradients
+                        optimizer.zero_grad()
 
-            neg_loss = self._negative_sampling_loss_torch(
-                inputs, labels, self._batch_size, self._unigram_counts, self._negatives)
-            neg_loss.sum().backward(create_graph=True, retain_graph=True)
+                        neg_loss = self._negative_sampling_loss_torch(
+                            inputs, labels, self._batch_size, self._unigram_counts, self._negatives)
+                        neg_loss.sum().backward(create_graph=True, retain_graph=True)
 
-            # update gradients
-            optimizer.step()
-            
-            if step % log_per_steps == 0:
-                print('step:', step)
+                        # update gradients
+                        optimizer.step()
+                        
+                        if  n_sent % log_per_steps == 0:
+                            print('sent :', n_sent)
 
         print("Training completed")
 

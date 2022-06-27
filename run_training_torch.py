@@ -33,21 +33,21 @@ text = read_corpus('./corpus/nyt_articles_31.txt')
 """
 Create DATASET
 """
-data, unigram_counts, vocab, inv_vocab = create_skipgram(
-    text, WINDOW_SIZE, WEATLIST.copy(), MIN_FREQ, SAMPLING_RATE, EPOCHS, BATCH_SIZE)
+# data, unigram_counts, vocab, inv_vocab = create_skipgram(
+#     text, WINDOW_SIZE, WEATLIST.copy(), MIN_FREQ, SAMPLING_RATE, EPOCHS, BATCH_SIZE)
 
 
-with open('data_small.pkl', 'wb') as f:
-  pickle.dump(data, f)
+# with open('data_small.pkl', 'wb') as f:
+#   pickle.dump(data, f)
 
-with open('unigram_counts_small.pkl', 'wb') as f:
-  pickle.dump(unigram_counts, f)
+# with open('unigram_counts_small.pkl', 'wb') as f:
+#   pickle.dump(unigram_counts, f)
 
-with open('vocab_small.pkl', 'wb') as f:
-  pickle.dump(vocab, f)
+# with open('vocab_small.pkl', 'wb') as f:
+#   pickle.dump(vocab, f)
 
-with open('inv_vocab_small.pkl', 'wb') as f:
-  pickle.dump(inv_vocab, f)
+# with open('inv_vocab_small.pkl', 'wb') as f:
+#   pickle.dump(inv_vocab, f)
 
 
 
@@ -62,6 +62,12 @@ word2vec = Word2VecModel(unigram_counts,
                          alpha=LEARNING_RATE)
 
 """
+Build DATASET
+"""
+word2vec.build_dataset(text, WEATLIST.copy(), MIN_FREQ, SAMPLING_RATE)
+
+
+"""
 Train MODEL
 """
-word2vec.train(data, save=True)
+word2vec.train(data, EPOCHS, save=True)
