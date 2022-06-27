@@ -182,7 +182,7 @@ class Word2VecModel(torch.nn.Module):
 
 
 
-    def train(self, data, epochs, save=True):
+    def train(self, epochs, save=True):
         """trains model
 
         Returns:
@@ -194,7 +194,7 @@ class Word2VecModel(torch.nn.Module):
         
         log_per_steps = 1000
         
-        print('Total number of steps: ', len(data))
+        print('Total number of steps: ', len(self._text))
 
         for epoch in epochs:
             for n_sent, sentence in enumerate(self.get_text()):
