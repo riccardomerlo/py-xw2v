@@ -214,16 +214,16 @@ class Word2VecModel(torch.nn.Module):
                         
                         if len(inputs_batch) == self._batch_size:
                             
-                            with torch.no_grad():
-                                # reset gradients
-                                optimizer.zero_grad()
+                            #with torch.no_grad():
+                            # reset gradients
+                            optimizer.zero_grad()
 
-                                neg_loss = self._negative_sampling_loss_torch(
-                                    inputs_batch, labels_batch, self._batch_size, self._unigram_counts, self._negatives)
-                                neg_loss.sum().backward(create_graph=True, retain_graph=True)
+                            neg_loss = self._negative_sampling_loss_torch(
+                                inputs_batch, labels_batch, self._batch_size, self._unigram_counts, self._negatives)
+                            neg_loss.sum().backward(create_graph=True, retain_graph=True)
 
-                                # update gradients
-                                optimizer.step()
+                            # update gradients
+                            optimizer.step()
                             
                             if  n_sent % log_per_steps == 0:
                                 print('sent :', n_sent)
