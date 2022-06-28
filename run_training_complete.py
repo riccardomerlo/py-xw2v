@@ -30,7 +30,8 @@ WEATLIST = S+T+A+B
 """
 Read CORPUS
 """
-text = read_corpus('./corpus/nyt_articles_v2.txt')
+text = read_corpus('./corpus/nyt_dal_90_ad_oggi.txt')
+#text = read_corpus('./corpus/nyt_articles_v2.txt')
 
 
 
