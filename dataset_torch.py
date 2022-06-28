@@ -29,9 +29,9 @@ def subsampling(vocab, whitelist=[], rate=0.0001):
     for word in vocab.keys():
         frac = vocab[word]/len(vocab.keys())
         prob = (np.sqrt(frac/rate) + 1) * (rate/frac)
-        if np.random.random() > prob:
+        if np.random.random() < prob:
             new_tokens.append(word)
-    return list(set(new_tokens))
+    return list(set(vocab).difference(set(new_tokens)))
 
 
 def high_freq(vocab, whitelist=[], min_freq=1):
