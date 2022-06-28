@@ -112,6 +112,31 @@ def create_skipgram(text, window, whitelist=[], min_freq=1, sampling_rate=1e-3, 
     return data, unigram_counts, my_vec, {v: k for k, v in my_vec.items()} 
 
 
+def get_weat_text(text, weatlist):
+    """
+    return text with only sentences which contain a weat word
+    """
+    data = []
+    for sentence in text:
+        for word in sentence:
+            if word in weatlist:
+                data.append(sentence)
+                break
+
+    return data
+
+def get_tuple_weat(text, weatlist):
+    data = []
+    for nsent, sentence in enumerate(iter(text)):
+        for i, t in enumerate(sentence):
+            if t in weatlist:
+                contexts = list(range(i-window, i + window+1))
+                contexts = [c for c in contexts if c >=
+                            0 and c != i and c < len(sentence)]
+                for c in contexts:
+                    data.append([my_vec[t],my_vec[sentence[c]], nsent])
+    return data
+
 def read_corpus(path, min_len = 3):
     text = []
     #cut_min = lambda x: x if len(x) > min_len

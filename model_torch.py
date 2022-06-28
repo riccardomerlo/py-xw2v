@@ -175,12 +175,42 @@ class Word2VecModel(torch.nn.Module):
         self._vocab_size = len(unigram_counts)
         self._inv_vocab = inv_vocab
 
+        _data = []
+
+        step_log = 1000
+
+        for n_sent, sentence in enumerate(self.get_text()):
+        
+            for i, t in enumerate(iter(sentence)):
+                contexts = list(range(i-window, i + window+1))
+                contexts = [c for c in contexts if c >=
+                            0 and c != i and c < len(sentence)]
+                for c in contexts:
+                    #my_vec[t],my_vec[sentence[c]], nsent
+
+                    _data.append([self._vocab[t], self._vocab[sentence[c]], nsent])
+            
+            if n_sent % step_log == 0:
+                print(n_sent/len(self._text)*100, end=' ')
+        
+        #batch _inputs and _labels
+        _data_batch = split_given_size(_data, self._batch_size)
+       
+        #remove batch if size < batch_size
+        _data_batch = [x for x in _data_batch if len(x) == self._batch_size]
+       
+        #repeat epoch times (in training)
+
+        self._data = _data_batch
+
     
     def get_text(self):
 
         return iter(self._text)
 
+    def get_data(self):
 
+        return iter(self._data)
 
 
     def train(self, epochs, window, save=True):
@@ -201,36 +231,25 @@ class Word2VecModel(torch.nn.Module):
         labels_batch = []
 
         for epoch in range(epochs):
-            for n_sent, sentence in enumerate(self.get_text()):
-                #sentence = [s for s in sentence if s in to_keep_words]
-                for i, t in enumerate(iter(sentence)):
-                    contexts = list(range(i-window, i + window+1))
-                    contexts = [c for c in contexts if c >=
-                                0 and c != i and c < len(sentence)]
-                    for c in contexts:
-                        #my_vec[t],my_vec[sentence[c]], nsent
 
-                        inputs_batch.append(self._vocab[t])
-                        labels_batch.append(self._vocab[sentence[c]])
-                        
-                        if len(inputs_batch) == self._batch_size:
-                            
-                            #with torch.no_grad():
-                            # reset gradients
-                            optimizer.zero_grad()
+            for step, target_batch, context_batch, nsent in enumerate(self.get_data()):
+            
+            #TODO salvare [self._vocab[t], self._vocab[sentence[c]]]
+            #TODO costruire input, label e poi ripeto epoch volte, quindi calcolo batch e addestro
+            
+                # reset gradients
+                optimizer.zero_grad()
 
-                            neg_loss = self._negative_sampling_loss_torch(
-                                inputs_batch, labels_batch, self._batch_size, self._unigram_counts, self._negatives)
-                            neg_loss.sum().backward(create_graph=True, retain_graph=True)
+                neg_loss = self._negative_sampling_loss_torch(
+                    target_batch, context_batch, self._batch_size, self._unigram_counts, self._negatives)
+                neg_loss.sum().backward(create_graph=True, retain_graph=True)
 
-                            # update gradients
-                            optimizer.step()
-                            
-                            if  n_sent % log_per_steps == 0:
-                                print('sent :', n_sent)
+                # update gradients
+                optimizer.step()
+                
+                if  step % log_per_steps == 0:
+                    print('sent :', step/len(self._data))
 
-                            inputs_batch = []
-                            labels_batch = []
 
         print("Training completed")
 
@@ -242,12 +261,7 @@ class Word2VecModel(torch.nn.Module):
             np.save('syn0_final_torch', syn0_final)
             np.save('syn1_final_torch', syn1_final)
 
-            with open("vocab.pkl", "wb") as han:
-                pickle.dump(self._vocab, han)
-            with open("inv_vocab.pkl", "wb") as han:
-                pickle.dump(self._inv_vocab, han)
-            with open("unigram_counts.pkl", "wb") as han:
-                pickle.dump(self._unigram_counts, han)
+            
 
 
         return [syn0_final, syn1_final]
