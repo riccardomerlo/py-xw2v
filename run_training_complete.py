@@ -48,6 +48,12 @@ Build DATASET
 """
 word2vec.build_dataset(text, WINDOW_SIZE, WEATLIST.copy(), MIN_FREQ, SAMPLING_RATE)
 
+with open("to_remove_words.pkl", "wb") as han:
+    pickle.dump(word2vec._to_remove_words, han)
+with open("to_keep_words.pkl", "wb") as han:
+    pickle.dump(word2vec._to_keep_words, han)
+with open("text.pkl", "wb") as han:
+    pickle.dump(word2vec._text, han)
 with open("data.pkl", "wb") as han:
     pickle.dump(word2vec._data, han)
 with open("vocab.pkl", "wb") as han:

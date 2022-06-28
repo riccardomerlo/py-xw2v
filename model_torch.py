@@ -160,6 +160,9 @@ class Word2VecModel(torch.nn.Module):
         new_vocab, to_remove_words, to_keep_words = apply_reduction(
             text, vocab, whitelist.copy(), min_freq, sampling_rate)
 
+        self._to_remove_words = to_remove_words
+        self._to_keep_words = to_keep_words
+
         new_vocab = dict(sorted(new_vocab.items(),key=lambda item: item[1], reverse=False))
 
         my_vec = {key: i for i, key in enumerate(sorted(new_vocab.keys())) }
@@ -242,7 +245,14 @@ class Word2VecModel(torch.nn.Module):
                 context_batch = [x[1] for x in batch] 
                 n_sent = [x[2] for x in batch]
                 # reset gradients
-                optimizer.zero_grad()
+                """
+                As of v1.7.0, Pytorch offers the option to reset the gradients 
+                to None optimizer.zero_grad(set_to_none=True) instead of filling 
+                them with a tensor of zeroes. The docs claim that this setting 
+                reduces memory requirements and slightly improves performance, 
+                but might be error-prone if not handled carefully.
+                """
+                optimizer.zero_grad(set_to_none=True)
 
                 neg_loss = self._negative_sampling_loss_torch(
                     target_batch, context_batch, self._batch_size, self._unigram_counts, self._negatives)

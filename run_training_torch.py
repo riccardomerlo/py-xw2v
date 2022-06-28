@@ -65,6 +65,8 @@ Build DATASET
 """
 word2vec.build_dataset(text, WINDOW_SIZE, WEATLIST.copy(), MIN_FREQ, SAMPLING_RATE)
 
+
+
 with open("data.pkl", "wb") as han:
     pickle.dump(word2vec._data, han)
 with open("vocab.pkl", "wb") as han:
