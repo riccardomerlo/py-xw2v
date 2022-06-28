@@ -191,7 +191,7 @@ class Word2VecModel(torch.nn.Module):
                     _data.append([self._vocab[t], self._vocab[sentence[c]], n_sent])
             
             if n_sent % step_log == 0:
-                print(n_sent/len(self._text)*100, end=' ')
+                print(int(n_sent/len(self._text)*100), end=' ')
         
         #batch _inputs and _labels
         _data_batch = split_given_size(_data, self._batch_size)
@@ -223,7 +223,7 @@ class Word2VecModel(torch.nn.Module):
         # average_loss = 0. #TODO
         optimizer = torch.optim.SGD(self.parameters(), lr=self._alpha)
         
-        log_per_steps = 1000
+        log_per_steps = 2500
         
         print('Total number of steps: ', len(self._text))
         
@@ -232,6 +232,7 @@ class Word2VecModel(torch.nn.Module):
 
         for epoch in range(epochs):
 
+            print('-----start-epoch',epoch,'----')
             for step, batch in enumerate(self.get_data()):
             
             #TODO salvare [self._vocab[t], self._vocab[sentence[c]]]
@@ -251,7 +252,9 @@ class Word2VecModel(torch.nn.Module):
                 optimizer.step()
                 
                 if  step % log_per_steps == 0:
-                    print('sent :', step/len(self._data))
+                    print('% :', round(step/len(self._data)* 100,1))
+            
+            print('-----end-epoch',epoch,'----')
 
 
         print("Training completed")

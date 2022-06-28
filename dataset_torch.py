@@ -18,6 +18,9 @@ def get_vocab(text):
 
 
 def subsampling(vocab, whitelist=[], rate=0.0001):
+    """
+    returns list of subsampled words to remove
+    """
 
     # A storage to store tokens after subsampling
     new_tokens = whitelist.copy()
@@ -26,7 +29,7 @@ def subsampling(vocab, whitelist=[], rate=0.0001):
     for word in vocab.keys():
         frac = vocab[word]/len(vocab.keys())
         prob = (np.sqrt(frac/rate) + 1) * (rate/frac)
-        if np.random.random() < prob:
+        if np.random.random() > prob:
             new_tokens.append(word)
     return list(set(new_tokens))
 
