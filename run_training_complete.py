@@ -15,8 +15,8 @@ BATCH_SIZE = 256
 NEGATIVES = 5
 EPOCHS = 3
 SAMPLING_RATE = 1E-3
-MIN_FREQ = 10
-WINDOW_SIZE = 5
+MIN_FREQ = 60
+WINDOW_SIZE = 2
 LEARNING_RATE = 1E-3
 # liste_termini_weat
 S = ["science", "technology", "physics", "chemistry", "einstein", "nasa", 
