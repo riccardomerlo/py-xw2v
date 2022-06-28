@@ -33,6 +33,23 @@ def subsampling(vocab, whitelist=[], rate=0.0001):
             new_tokens.append(word)
     return list(set(vocab).difference(set(new_tokens)))
 
+def subsample_prob(vocab, word, rate=1e-3):
+    """
+    returns boolean:
+        -True if given word is going to be sampled -> rimuovere
+        -False if given word is not going to be sampled
+    
+    computes probability for given word, according to formula..., 
+    """
+    np.random.seed(0)
+    frac = vocab[word]/len(vocab.keys())
+    prob = (np.sqrt(frac/rate) + 1) * (rate/frac)
+    if np.random.random() < prob:
+        # si toglie
+        return True
+    #non si toglie
+    return False
+
 
 def high_freq(vocab, whitelist=[], min_freq=1):
     """
@@ -59,10 +76,10 @@ def apply_reduction(text, vocab, whitelist, min_freq, sampling_rate):
     for word in _low_freq:
       new_vocab.pop(word)
     
-    subsamples = subsampling(new_vocab, whitelist.copy(), sampling_rate)
+    #subsamples = subsampling(new_vocab, whitelist.copy(), sampling_rate)
 
-    to_remove_words = subsamples.copy() + _low_freq.copy()
-
+    #to_remove_words = subsamples.copy() + _low_freq.copy()
+    to_remove_words = _low_freq.copy()
     to_keep_words = set(new_vocab.keys()).difference(set(to_remove_words))
     
     return new_vocab, to_remove_words, to_keep_words

@@ -4,7 +4,7 @@ import pickle
 import torch.utils.data
 from typing import List, \
     Union
-from dataset_torch import split_given_size, get_vocab, apply_reduction
+from dataset_torch import split_given_size, get_vocab, apply_reduction, subsample_prob
 
 torch.set_default_tensor_type(torch.cuda.FloatTensor if torch.cuda.is_available() 
                                                      else torch.FloatTensor)
@@ -183,14 +183,16 @@ class Word2VecModel(torch.nn.Module):
         step_log = 1000
 
         for n_sent, sentence in enumerate(self.get_text()):
-        
+            # subsample (rimuovo parole in base alla loro probabilità)
+            sentence = [x for x in sentence if not subsample_prob(self._vocab, x)]
             for i, t in enumerate(iter(sentence)):
+                
                 contexts = list(range(i-window, i + window+1))
                 contexts = [c for c in contexts if c >=
                             0 and c != i and c < len(sentence)]
                 for c in contexts:
                     #my_vec[t],my_vec[sentence[c]], nsent
-
+                    
                     _data.append([self._vocab[t], self._vocab[sentence[c]], n_sent])
             
             if n_sent % step_log == 0:
