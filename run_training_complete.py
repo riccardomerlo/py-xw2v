@@ -49,13 +49,13 @@ Build DATASET
 word2vec.build_dataset(text, WINDOW_SIZE, WEATLIST.copy(), MIN_FREQ, SAMPLING_RATE)
 
 with open("data.pkl", "wb") as han:
-    pickle.dump(self._data, han)
+    pickle.dump(word2vec._data, han)
 with open("vocab.pkl", "wb") as han:
-    pickle.dump(self._vocab, han)
+    pickle.dump(word2vec._vocab, han)
 with open("inv_vocab.pkl", "wb") as han:
-    pickle.dump(self._inv_vocab, han)
+    pickle.dump(word2vec._inv_vocab, han)
 with open("unigram_counts.pkl", "wb") as han:
-    pickle.dump(self._unigram_counts, han)
+    pickle.dump(word2vec._unigram_counts, han)
 
 """
 Build WEIGHTS

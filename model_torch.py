@@ -188,7 +188,7 @@ class Word2VecModel(torch.nn.Module):
                 for c in contexts:
                     #my_vec[t],my_vec[sentence[c]], nsent
 
-                    _data.append([self._vocab[t], self._vocab[sentence[c]], nsent])
+                    _data.append([self._vocab[t], self._vocab[sentence[c]], n_sent])
             
             if n_sent % step_log == 0:
                 print(n_sent/len(self._text)*100, end=' ')
@@ -232,11 +232,14 @@ class Word2VecModel(torch.nn.Module):
 
         for epoch in range(epochs):
 
-            for step, target_batch, context_batch, nsent in enumerate(self.get_data()):
+            for step, batch in enumerate(self.get_data()):
             
             #TODO salvare [self._vocab[t], self._vocab[sentence[c]]]
             #TODO costruire input, label e poi ripeto epoch volte, quindi calcolo batch e addestro
-            
+
+                target_batch = batch[0]
+                context_batch = batch[1] 
+                n_sent = batch[2]
                 # reset gradients
                 optimizer.zero_grad()
 
