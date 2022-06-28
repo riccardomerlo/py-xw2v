@@ -152,7 +152,7 @@ class Word2VecModel(torch.nn.Module):
         return loss
 
 
-    def build_dataset(self, text, whitelist=[], min_freq=1, sampling_rate=1e-3 ):
+    def build_dataset(self, text, window, whitelist=[], min_freq=1, sampling_rate=1e-3 ):
         """
         """
         data = []
@@ -213,7 +213,7 @@ class Word2VecModel(torch.nn.Module):
         return iter(self._data)
 
 
-    def train(self, epochs, window, save=True):
+    def train(self, epochs, save=True):
         """trains model
 
         Returns:

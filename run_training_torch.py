@@ -63,7 +63,7 @@ word2vec = Word2VecModel(hidden_size=300,
 """
 Build DATASET
 """
-word2vec.build_dataset(text, WEATLIST.copy(), MIN_FREQ, SAMPLING_RATE)
+word2vec.build_dataset(text, WINDOW_SIZE, WEATLIST.copy(), MIN_FREQ, SAMPLING_RATE)
 
 with open("data.pkl", "wb") as han:
     pickle.dump(self._data, han)
@@ -84,4 +84,4 @@ word2vec.build_weights()
 """
 Train MODEL
 """
-word2vec.train(EPOCHS, WINDOW_SIZE, save=True)
+word2vec.train(EPOCHS, save=True)
