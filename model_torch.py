@@ -188,10 +188,12 @@ class Word2VecModel(torch.nn.Module):
         if self._sampling_rate != 0:
             subsample_cache = cache_subsample_prob(count_vocab, self._sampling_rate)
 
+        cache_sentence = []
         for n_sent, sentence in enumerate(self.get_text()):
             # subsample (rimuovo parole in base alla loro probabilità)
             if self._sampling_rate != 0:
                 sentence = get_sampled_sent(n_sent, sentence, subsample_cache)
+                cache_sentence.append(sentence)
 
             for i, t in enumerate(iter(sentence)):
                 
@@ -216,6 +218,9 @@ class Word2VecModel(torch.nn.Module):
         #repeat epoch times (in training)
 
         self._data = _data_batch
+
+        with open("new_sentence.pkl", "wb") as han:
+            pickle.dump(cache_sentence, han)
 
     
     def get_text(self):
