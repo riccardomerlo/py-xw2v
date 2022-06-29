@@ -4,7 +4,7 @@ import pickle
 import torch.utils.data
 from typing import List, \
     Union
-from dataset_torch import split_given_size, get_vocab, apply_reduction, subsample_prob, cache_subsample_prob
+from dataset_torch import split_given_size, get_vocab, apply_reduction, subsample_prob, cache_subsample_prob, get_sampled_sent, get_dynamic_window
 
 torch.set_default_tensor_type(torch.cuda.FloatTensor if torch.cuda.is_available() 
                                                      else torch.FloatTensor)
@@ -152,7 +152,7 @@ class Word2VecModel(torch.nn.Module):
         return loss
 
 
-    def build_dataset(self, text, window, whitelist=[], min_freq=1, sampling_rate=1e-3 ):
+    def build_dataset(self, text, max_window, whitelist=[], min_freq=1, sampling_rate=1e-3 ):
         """
         """
         self._sampling_rate = sampling_rate
@@ -195,6 +195,8 @@ class Word2VecModel(torch.nn.Module):
 
             for i, t in enumerate(iter(sentence)):
                 
+                window = get_dynamic_window(n_sent, i, max_window)    
+
                 contexts = list(range(i-window, i + window+1))
                 contexts = [c for c in contexts if c >=
                             0 and c != i and c < len(sentence)]

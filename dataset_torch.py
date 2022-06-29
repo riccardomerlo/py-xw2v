@@ -60,9 +60,15 @@ def cache_subsample_prob(vocab, rate=1e-3):
     return cache
 
 def get_sampled_sent(n_sent, sentence, subsample_cache):
-     np.random.seed(n_sent)
+    np.random.seed(n_sent)
 
-     return [x for x in sentence if not subsample_prob(subsample_cache[x])]
+    return [x for x in sentence if not subsample_prob(subsample_cache[x])]
+
+def get_dynamic_window(n_sent, i, max_window):
+
+    np.random.seed(n_sent+i)
+
+    return np.random.randint(1, max_window+1)
 
 def high_freq(vocab, whitelist=[], min_freq=1):
     """
