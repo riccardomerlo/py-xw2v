@@ -33,7 +33,7 @@ def subsampling(vocab, whitelist=[], rate=0.0001):
             new_tokens.append(word)
     return list(set(vocab).difference(set(new_tokens)))
 
-def subsample_prob(vocab, word, rate=1e-3):
+def subsample_prob(prob):
     """
     returns boolean:
         -True if given word is going to be sampled -> rimuovere
@@ -41,15 +41,28 @@ def subsample_prob(vocab, word, rate=1e-3):
     
     computes probability for given word, according to formula..., 
     """
-    np.random.seed(0)
-    frac = vocab[word]/len(vocab.keys())
-    prob = (np.sqrt(frac/rate) + 1) * (rate/frac)
+
     if np.random.random() < prob:
         # si toglie
         return True
     #non si toglie
     return False
 
+
+def _subsample_prob(frac, rate=1e-3):
+    return (np.sqrt(frac/rate) + 1) * (rate/frac)
+
+def cache_subsample_prob(vocab, rate=1e-3):
+    """computes subsample prob for each word in vocab
+    """
+    len_vocab = len(vocab)
+    cache = {word: _subsample_prob(vocab[word]/ len_vocab, rate) for word in vocab.keys()}
+    return cache
+
+def get_sampled_sent(n_sent, sentence, subsample_cache):
+     np.random.seed(n_sent)
+
+     return [x for x in sentence if not subsample_prob(subsample_cache[x])]
 
 def high_freq(vocab, whitelist=[], min_freq=1):
     """

@@ -4,7 +4,7 @@ import pickle
 import torch.utils.data
 from typing import List, \
     Union
-from dataset_torch import split_given_size, get_vocab, apply_reduction, subsample_prob
+from dataset_torch import split_given_size, get_vocab, apply_reduction, subsample_prob, cache_subsample_prob
 
 torch.set_default_tensor_type(torch.cuda.FloatTensor if torch.cuda.is_available() 
                                                      else torch.FloatTensor)
@@ -155,44 +155,51 @@ class Word2VecModel(torch.nn.Module):
     def build_dataset(self, text, window, whitelist=[], min_freq=1, sampling_rate=1e-3 ):
         """
         """
+        self._sampling_rate = sampling_rate
         data = []
         vocab = get_vocab(text)
-        new_vocab, to_remove_words, to_keep_words = apply_reduction(
+        count_vocab, to_remove_words, to_keep_words = apply_reduction(
             text, vocab, whitelist.copy(), min_freq, sampling_rate)
 
         self._to_remove_words = to_remove_words
         self._to_keep_words = to_keep_words
 
-        new_vocab = dict(sorted(new_vocab.items(),key=lambda item: item[1], reverse=False))
+        count_vocab = dict(sorted(count_vocab.items(),key=lambda item: item[1], reverse=False))
 
-        my_vec = {key: i for i, key in enumerate(sorted(new_vocab.keys())) }
+        ord_vocab = {key: i for i, key in enumerate(sorted(count_vocab.keys())) }
 
-        unigram_counts = [new_vocab[x] for x in my_vec]
+        unigram_counts = [count_vocab[x] for x in ord_vocab]
 
-        inv_vocab = {v: k for k, v in my_vec.items()}
+        inv_vocab = {v: k for k, v in ord_vocab.items()}
 
         #un po' lento...
         self._text = [[s for s in sentence if s in to_keep_words] for sentence in text]
-        self._vocab = my_vec
+        self._vocab = ord_vocab
         self._unigram_counts = unigram_counts
         self._vocab_size = len(unigram_counts)
         self._inv_vocab = inv_vocab
+
 
         _data = []
 
         step_log = 1000
 
+        subsample_cache = {}
+        if self._sampling_rate != 0:
+            subsample_cache = cache_subsample_prob(count_vocab, self._sampling_rate)
+
         for n_sent, sentence in enumerate(self.get_text()):
             # subsample (rimuovo parole in base alla loro probabilità)
-            sentence = [x for x in sentence if not subsample_prob(self._vocab, x)]
+            if self._sampling_rate != 0:
+                sentence = get_sampled_sent(n_sent, sentence, subsample_cache)
+
             for i, t in enumerate(iter(sentence)):
                 
                 contexts = list(range(i-window, i + window+1))
                 contexts = [c for c in contexts if c >=
                             0 and c != i and c < len(sentence)]
                 for c in contexts:
-                    #my_vec[t],my_vec[sentence[c]], nsent
-                    
+                    # TARGET, CONTEXT, nsent
                     _data.append([self._vocab[t], self._vocab[sentence[c]], n_sent])
             
             if n_sent % step_log == 0:
