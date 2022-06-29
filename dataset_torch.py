@@ -82,10 +82,11 @@ def low_freq(vocab, whitelist=[], min_freq=1):
     """
     return list(set([x for x in vocab.keys() if vocab[x] < min_freq]).difference(set(whitelist.copy())))
 
-def apply_reduction(text, vocab, whitelist, min_freq, sampling_rate):
+def apply_reduction(text, vocab, whitelist, min_freq):
     """
     returns: new_vocab -> vocabolario senza le low freq words
-              to_remove_words -> lista di parole da rimuovere (low freq + subsampling)
+              to_remove_words -> lista di parole da rimuovere (low freq )
+              to_keep_words -> lista di parole da tenere
     """
     _low_freq = low_freq(vocab, whitelist.copy(), min_freq)
  
