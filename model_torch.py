@@ -5,6 +5,7 @@ import torch.utils.data
 from typing import List, \
     Union
 from dataset_torch import split_given_size, get_vocab, apply_reduction, subsample_prob, cache_subsample_prob, get_sampled_sent, get_dynamic_window
+import random
 
 torch.set_default_tensor_type(torch.cuda.FloatTensor if torch.cuda.is_available() 
                                                      else torch.FloatTensor)
@@ -209,6 +210,10 @@ class Word2VecModel(torch.nn.Module):
             if n_sent % step_log == 0:
                 print(int(n_sent/len(self._text)*100), end=' ')
         
+        #shuffle data before batching
+        random.seed(self._random_seed) #ensures reproducibility
+        random.shuffle(_data)
+        
         #batch _inputs and _labels
         _data_batch = split_given_size(_data, self._batch_size)
        
@@ -228,7 +233,7 @@ class Word2VecModel(torch.nn.Module):
         return iter(self._text)
 
     def get_data(self):
-
+        
         return iter(self._data)
 
 
@@ -250,7 +255,7 @@ class Word2VecModel(torch.nn.Module):
         labels_batch = []
 
         for epoch in range(epochs):
-
+            # TODO: shuffling e re-batching anche per ciascuna epoch?
             print('-----start-epoch',epoch,'----')
             for step, batch in enumerate(self.get_data()):
             
