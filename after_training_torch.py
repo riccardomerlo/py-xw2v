@@ -236,6 +236,27 @@ def post_training(k, vocab, inv_vocab, dataset, batch_size, unigram_counts, nega
     with open('dict_hessians_'+str(k)+'.pickle', 'wb') as handle_hes:
         pickle.dump(hessian_diz, handle_hes, protocol=pickle.HIGHEST_PROTOCOL)
 
+def post_training_simple(k, vocab, inv_vocab, dataset, unigram_counts, negatives, list_index_weat, loss_func, weights):
+    vocab_len = len(vocab)
+    count = 0
+    array_tuples_unique = np.zeros((len(list_uniqueweat), 300))
+
+    for step, training_point in enumerate(dataset):
+        inputs = training_point[0]
+        labels = training_point[1]
+
+        loss = loss_func(inputs, labels, 1,
+                          unigram_counts, negatives, weights, vocab_len)
+        grad = torch.autograd.grad(loss.sum(), weights[0], retain_graph=True)[0]
+
+        array_tuples_unique[step] = grad[inputs]
+        count+=1
+        if count%100==0:
+          print(count)
+
+    with open("array_grad_unique_"+str(k)+".pkl", "wb") as v:
+      pickle.dump(array_tuples_unique, v)
+    
         
 def post_training_optimized(k, vocab, inv_vocab, dataset, batch_size, hidden_size, unigram_counts, negatives, list_index_weat, loss_func, weights, diz_gradients, hessian_diz):
     vocab_len = len(vocab)
