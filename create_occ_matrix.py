@@ -67,23 +67,17 @@ list_index_weat = []
 for word in S+T+A+B+most_common_words:
   list_index_weat.append(vocab[word])
 
-list_flatweat = []
-for step, training_point in enumerate(flat_data):
-  inputs = training_point[0]
-  for word in list_index_weat:
-    if word==inputs: # keep a batch if it contains at least one weat word
-      list_flatweat.append(training_point)
-print("Tot. number of inputs to consider in total (no batches): ", len(list_flatweat))
 
 with open("list_unique_weat.pkl", "rb") as v:
   list_uniqueweat = pickle.load(v)
 
-
 group = ddict(list)
 
-for target, label, nsent in list_flatweat:
-  group[nsent].append((target, label))
+for target, label, nsent in flat_data:
+    if target in list_index_weat:
+        group[nsent].append((target, label))
 
+print('group dict computed')
 
 class MultiLabelCounter():
     def __init__(self, classes=None):
