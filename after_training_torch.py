@@ -239,7 +239,7 @@ def post_training(k, vocab, inv_vocab, dataset, batch_size, unigram_counts, nega
 def post_training_simple(k, vocab, inv_vocab, dataset, unigram_counts, negatives, list_index_weat, loss_func, weights):
     vocab_len = len(vocab)
     count = 0
-    array_tuples_unique = np.zeros((len(list_uniqueweat), 300))
+    array_tuples_unique = np.zeros((len(dataset), 300))
 
     for step, training_point in enumerate(dataset):
         inputs = training_point[0]
