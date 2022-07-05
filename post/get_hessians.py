@@ -85,7 +85,7 @@ new_ind_conx = np.concatenate([[0], ind_conx + 1, [len(tuple_set_ord)]])
 
 full_batch = [tuple_set_ord[new_ind_conx[x]:new_ind_conx[x+1]] for x in range(len(new_ind_conx) -1)]
 
-
+print('fine load -----------------')
 
 """# RUn
 
@@ -97,9 +97,9 @@ full_batch = [tuple_set_ord[new_ind_conx[x]:new_ind_conx[x+1]] for x in range(le
 def fixed_unigram_candidate_sampler(
         true_classes,
         inputs,
-        num_samples: int,
-        unigrams: List[Union[int, float]],
-        distortion: float = 1.):
+        num_samples,
+        unigrams,
+        distortion = 1.):
 
     if isinstance(true_classes, torch.Tensor):
         true_classes = true_classes.detach().cpu().numpy()
