@@ -16,7 +16,7 @@ NEGATIVES = 5
 EPOCHS = 3
 SAMPLING_RATE = 1E-3
 MIN_FREQ = 60
-WINDOW_SIZE = 2
+WINDOW_SIZE = 5
 LEARNING_RATE = 1E-3
 # liste_termini_weat
 S = ["science", "technology", "physics", "chemistry", "einstein", "nasa", 
@@ -38,7 +38,7 @@ text = read_corpus('./corpus/nyt_dal_90_ad_oggi.txt')
 """
 Create MODEL
 """
-word2vec = Word2VecModel(hidden_size=300,
+word2vec = Word2VecModel(hidden_size=100,
                          batch_size=BATCH_SIZE,
                          negatives=NEGATIVES,
                          power=0.75,
