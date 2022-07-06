@@ -29,32 +29,31 @@ from collections import Counter
 from word_vectors import WordVectors
 
 
-
 def get_tuples(sentence, vocab):
-  _data = []
+    _data = []
 
-  window = 5
-  for i, t in enumerate(sentence):
-      
-      contexts = list(range(i-window, i + window+1))
-      contexts = [c for c in contexts if c >=
-                  0 and c != i and c < len(sentence)]
-      for c in contexts:
-          # TARGET, CONTEXT, nsent
-          _data.append((vocab[t], vocab[sentence[c]], 1))
+    window = 5
+    for i, t in enumerate(sentence):
 
-  return _data
+        contexts = list(range(i-window, i + window+1))
+        contexts = [c for c in contexts if c >=
+                    0 and c != i and c < len(sentence)]
+        for c in contexts:
+            # TARGET, CONTEXT, nsent
+            _data.append((vocab[t], vocab[sentence[c]], 1))
 
+    return _data
 
 
 """# get gradients"""
+
 
 def fixed_unigram_candidate_sampler(
         true_classes,
         inputs,
         num_samples,
         unigrams,
-        distortion = 1.):
+        distortion=1.):
 
     if isinstance(true_classes, torch.Tensor):
         true_classes = true_classes.detach().cpu().numpy()
@@ -63,12 +62,13 @@ def fixed_unigram_candidate_sampler(
     unigrams = np.array(unigrams)
     if distortion != 1.:
         unigrams = unigrams.astype(np.float64) ** distortion
-    #print(indices)
+    # print(indices)
     result = np.zeros((len(inputs), num_samples))
     for idx in range(len(inputs)):
         value = inputs[idx]
         unigrams_new = unigrams.copy()
-        unigrams_new[true_classes[idx]] = 0 # così non prende la true class come possibile negative per se stessa
+        # così non prende la true class come possibile negative per se stessa
+        unigrams_new[true_classes[idx]] = 0
         torch.manual_seed(value)
         sampler = torch.utils.data.WeightedRandomSampler(
             unigrams, num_samples)
@@ -76,153 +76,156 @@ def fixed_unigram_candidate_sampler(
         result[idx] = candidates
     return result
 
-    
+
 def _negative_sampling_loss_torch(input, label, batch_size, unigram_counts, negatives, weights, vocab_len):
-        """Builds the negative sampling loss.
-        Args:
-          input: int of shape [batch_size] => 1 (skip_gram)
-          label: int of shape [batch_size] => 1
-          batch_size: batch size chosen
-          unigram_counts: list of sorted counts of words in vocab
-          negatives: number of negatives to consider
-          weights: list of weights, syn0 and syn1 matrices
-        Returns:
-          loss: float tensor of shape [batch_size, vocab_size].
-        """
-        syn0 = weights[0]
-        syn1 = weights[1]
+    """Builds the negative sampling loss.
+    Args:
+      input: int of shape [batch_size] => 1 (skip_gram)
+      label: int of shape [batch_size] => 1
+      batch_size: batch size chosen
+      unigram_counts: list of sorted counts of words in vocab
+      negatives: number of negatives to consider
+      weights: list of weights, syn0 and syn1 matrices
+    Returns:
+      loss: float tensor of shape [batch_size, vocab_size].
+    """
+    syn0 = weights[0]
+    syn1 = weights[1]
 
+    true_classes_array = torch.unsqueeze(torch.tensor(label), 0)
+    inputs_array = torch.unsqueeze(torch.tensor(input), 0)
+    sampled_values = fixed_unigram_candidate_sampler(true_classes=true_classes_array,
+                                                     inputs=inputs_array,
+                                                     num_samples=negatives,
+                                                     unigrams=unigram_counts,
+                                                     distortion=0.75)
 
-        true_classes_array = torch.unsqueeze(torch.tensor(label), 1)
-        inputs_array = torch.unsqueeze(torch.tensor(input), 1)
-        sampled_values = fixed_unigram_candidate_sampler(true_classes=true_classes_array,
-                                                         inputs=inputs_array,
-                                                         num_samples=negatives,
-                                                         unigrams=unigram_counts,
-                                                         distortion=0.75)
+    inputs_syn0 = torch.index_select(
+        syn0, 0, torch.from_numpy(np.array(input)).cuda())
+    true_syn1 = torch.index_select(
+        syn1, 0, torch.from_numpy(np.array(label)).cuda())
 
+    # sampled_syn1 = syn1[sampled_values]
+    list_sampled_syn1 = []
+    for batch in sampled_values:
+        sampled_syn1_batch = torch.index_select(syn1, 0, torch.tensor(
+            torch.from_numpy(batch).clone().detach(), dtype=torch.int32).cuda())
+        list_sampled_syn1.append(sampled_syn1_batch)
+        del sampled_syn1_batch
 
-        inputs_syn0 = torch.index_select(
-            syn0, 0, torch.from_numpy(np.array(input)).cuda())
-        true_syn1 = torch.index_select(
-            syn1, 0, torch.from_numpy(np.array(label)).cuda())
+    sampled_syn1 = torch.stack(list_sampled_syn1, 0)
 
-        # sampled_syn1 = syn1[sampled_values]
-        list_sampled_syn1 = []
-        for batch in sampled_values:
-            sampled_syn1_batch = torch.index_select(syn1, 0, torch.tensor(torch.from_numpy(batch).clone().detach(), dtype=torch.int32).cuda())
-            list_sampled_syn1.append(sampled_syn1_batch)
-            del sampled_syn1_batch
+    true_logits = torch.sum(torch.multiply(inputs_syn0, true_syn1), dim=1)
 
-        sampled_syn1 = torch.stack(list_sampled_syn1, 0)
+    del true_syn1
 
-        true_logits = torch.sum(torch.multiply(inputs_syn0, true_syn1), dim=1)
+    # true_logits.requires_grad_()
+    sampled_logits = torch.einsum('ijk,ikl->il', inputs_syn0.unsqueeze(1),
+                                  sampled_syn1.permute(0, 2, 1))
 
-        del true_syn1
+    del sampled_syn1
+    del inputs_syn0
+    # sampled_logits.requires_grad_()
 
-        #true_logits.requires_grad_()
-        sampled_logits = torch.einsum('ijk,ikl->il', inputs_syn0.unsqueeze(1),
-                                      sampled_syn1.permute(0,2,1))
-        
-        del sampled_syn1
-        del inputs_syn0
-        #sampled_logits.requires_grad_()
+    loss = torch.nn.BCEWithLogitsLoss(reduction='none')
 
-        loss = torch.nn.BCEWithLogitsLoss(reduction='none')
+    true_cross_entropy = loss(true_logits, torch.ones_like(true_logits))
 
-        true_cross_entropy = loss(true_logits, torch.ones_like(true_logits))
+    del true_logits
+    sampled_cross_entropy = loss(
+        sampled_logits, torch.zeros_like(sampled_logits))
 
-        del true_logits
-        sampled_cross_entropy = loss(
-            sampled_logits, torch.zeros_like(sampled_logits))
+    del sampled_logits
+    gc.collect()
 
-        del sampled_logits
-        gc.collect()
+    loss = torch.concat(
+        [true_cross_entropy.unsqueeze(1), sampled_cross_entropy], dim=1)
+    return loss
 
-        loss = torch.concat(
-            [true_cross_entropy.unsqueeze(1), sampled_cross_entropy], dim=1)
-        return loss
 
 def get_grad(inp_label, unigram_counts, weights, vocab):
 
-  loss_ng = _negative_sampling_loss_torch(inp_label[0], inp_label[1], 1,
-                                          unigram_counts, 5, weights, len(vocab)) 
-  
-  grad = torch.autograd.grad(loss_ng.sum(), 
-                            weights[0], 
-                            create_graph=True, 
-                            retain_graph=True
-                            )[0]
+    loss_ng = _negative_sampling_loss_torch(inp_label[0], inp_label[1], 1,
+                                            unigram_counts, 5, weights, len(vocab))
 
-  
-  return grad[inp_label[0]].detach().numpy()
+    grad = torch.autograd.grad(loss_ng.sum(),
+                               weights[0],
+                               create_graph=True,
+                               retain_graph=True
+                               )[0]
 
+    return grad[inp_label[0]].detach().cpu().numpy()
 
 
 def cos_similarity(tar, att):
-  '''
-  Calculates the cosine similarity of the target variable vs the attribute
-  '''
-  score = np.dot(tar, att) / (np.linalg.norm(tar) * np.linalg.norm(att))
-  return score
+    '''
+    Calculates the cosine similarity of the target variable vs the attribute
+    '''
+    score = np.dot(tar, att) / (np.linalg.norm(tar) * np.linalg.norm(att))
+    return score
 
 
 def mean_cos_similarity(tar, att):
-  '''
-  Calculates the mean of the cosine similarity between the target and the range of attributes
-  '''
-  mean_cos = np.mean([cos_similarity(tar, attribute) for attribute in att])
-  return mean_cos
+    '''
+    Calculates the mean of the cosine similarity between the target and the range of attributes
+    '''
+    mean_cos = np.mean([cos_similarity(tar, attribute) for attribute in att])
+    return mean_cos
 
 
 def association(tar, att1, att2):
-  '''
-  Calculates the mean association between a single target and all of the attributes
-  '''
-  association = mean_cos_similarity(tar, att1) - mean_cos_similarity(tar, att2)
+    '''
+    Calculates the mean association between a single target and all of the attributes
+    '''
+    association = mean_cos_similarity(
+        tar, att1) - mean_cos_similarity(tar, att2)
 
-  return association
+    return association
+
 
 def effect_sizev2(t1, t2, att1, att2):
-  '''
-  Calculates the effect size (d) between the two target variables and the attributes
-  Parameters:
-      t1 (np.array): first target variable matrix
-      t2 (np.array): second target variable matrix
-      att1 (np.array): first attribute variable matrix
-      att2 (np.array): second attribute variable matrix
-  Returns:
-      effect_size (float): The effect size, d.
-  Example:
-      t1 (np.array): Matrix of word embeddings for professions "Programmer, Scientist, Engineer"
-      t2 (np.array): Matrix of word embeddings for professions "Nurse, Librarian, Teacher"
-      att1 (np.array): matrix of word embeddings for males (man, husband, male, etc)
-      att2 (np.array): matrix of word embeddings for females (woman, wife, female, etc)
-  '''
-  combined = np.concatenate([t1, t2])
-  num1 = np.mean([association(target, att1, att2) for target in t1])
-  num2 = np.mean([association(target, att1, att2) for target in t2])
-  print("num1: ", num1)
-  print("num2: ", num2)
-  combined_association = np.array([association(target, att1, att2) for target in combined])
+    '''
+    Calculates the effect size (d) between the two target variables and the attributes
+    Parameters:
+        t1 (np.array): first target variable matrix
+        t2 (np.array): second target variable matrix
+        att1 (np.array): first attribute variable matrix
+        att2 (np.array): second attribute variable matrix
+    Returns:
+        effect_size (float): The effect size, d.
+    Example:
+        t1 (np.array): Matrix of word embeddings for professions "Programmer, Scientist, Engineer"
+        t2 (np.array): Matrix of word embeddings for professions "Nurse, Librarian, Teacher"
+        att1 (np.array): matrix of word embeddings for males (man, husband, male, etc)
+        att2 (np.array): matrix of word embeddings for females (woman, wife, female, etc)
+    '''
+    combined = np.concatenate([t1, t2])
+    num1 = np.mean([association(target, att1, att2) for target in t1])
+    num2 = np.mean([association(target, att1, att2) for target in t2])
+    print("num1: ", num1)
+    print("num2: ", num2)
+    combined_association = np.array(
+        [association(target, att1, att2) for target in combined])
 
-  dof = combined_association.shape[0]
-  denom = np.sqrt(((dof-1)*np.std(combined_association, ddof=1) ** 2 ) / (dof-1))
-  print("denomin: ", denom)
-  effect_size = (num1 - num2) / denom
+    dof = combined_association.shape[0]
+    denom = np.sqrt(
+        ((dof-1)*np.std(combined_association, ddof=1) ** 2) / (dof-1))
+    print("denomin: ", denom)
+    effect_size = (num1 - num2) / denom
 
-  return effect_size
+    return effect_size
 
 
 def get_emb_og(wv, word):
-  """
-  Function allowing to get the embedding of a given word.
-  word: word of interest
-  return: word embedding
-  """
+    """
+    Function allowing to get the embedding of a given word.
+    word: word of interest
+    return: word embedding
+    """
 
-  # same as wv[word]
-  return wv._syn0_final[wv._rev_vocab[word]]
+    # same as wv[word]
+    return wv._syn0_final[wv._rev_vocab[word]]
+
 
 def get_sent_grad(diz_sent_tuple, diz_mapping, arr_grad, sent_id):
     """
@@ -234,28 +237,29 @@ def get_sent_grad(diz_sent_tuple, diz_mapping, arr_grad, sent_id):
     diz_grad_sent = {}
     sent = diz_sent_tuple[sent_id]
     for tu in sent:
-      couple = tu[0]
-      count = tu[1]
-      #idx = diz_mapping[couple]
-      target = inv_vocab[couple[0]]
-      # sum over the gradients of instances which are in the sentence I'm removing
-      if target not in diz_grad_sent:
-        diz_grad_sent[target] = arr_grad[couple]*count
-      else:
-        diz_grad_sent[target] += arr_grad[couple]*count
+        couple = tu[0]
+        count = tu[1]
+        #idx = diz_mapping[couple]
+        target = inv_vocab[couple[0]]
+        # sum over the gradients of instances which are in the sentence I'm removing
+        if target not in diz_grad_sent:
+            diz_grad_sent[target] = arr_grad[couple]*count
+        else:
+            diz_grad_sent[target] += arr_grad[couple]*count
 
     return diz_grad_sent
 
 
 def get_hessian(word):
-  """
-  Creates dictionary of hessian matrices.
-  list_index_weat: list
-  """
-  idx_w = vocab[word]
-  with open(str(idx_w)+'_hessian.pkl', "rb") as f:
-      hessian_word = pickle.load(f)
-  return hessian_word
+    """
+    Creates dictionary of hessian matrices.
+    list_index_weat: list
+    """
+    idx_w = vocab[word]
+    with open(str(idx_w)+'_hessian.pkl', "rb") as f:
+        hessian_word = pickle.load(f)
+    return hessian_word
+
 
 def get_emb_pert(perturbed_emb, word):
     """
@@ -267,7 +271,8 @@ def get_emb_pert(perturbed_emb, word):
 
 
 def get_perturbed_emb_sent(wv, WEATLIST, diz_sent_tuple, diz_tuple_sent, diz_mapping, arr_grad, sent_id, sent_text):
-    diz_grad_sent = get_sent_grad(diz_sent_tuple, diz_mapping, arr_grad, sent_id)
+    diz_grad_sent = get_sent_grad(
+        diz_sent_tuple, diz_mapping, arr_grad, sent_id)
 
     perturbed_emb = {}  # dictionary {word: emb}
     #hessian_diz = get_hessian_words(list_index_weat, diz_tuple_sent, diz_mapping, arr_grad)
@@ -278,7 +283,7 @@ def get_perturbed_emb_sent(wv, WEATLIST, diz_sent_tuple, diz_tuple_sent, diz_map
             if word in diz_grad_sent:
                 # gradient for the word of interest
                 grad_sent = diz_grad_sent[word]
-                #print(grad_sent)
+                # print(grad_sent)
                 hessian = np.linalg.inv(get_hessian(word))
             else:  # in case the term is appearing only in the sentence to be removed
                 grad_sent = np.zeros(HIDDEN_SIZE)
@@ -289,52 +294,51 @@ def get_perturbed_emb_sent(wv, WEATLIST, diz_sent_tuple, diz_tuple_sent, diz_map
 
     return perturbed_emb
 
+
 def do_eff_size(sent, WEATLIST, dict_sent_tuple_count, array_gradients, wv):
 
-  perturbed_emb = get_perturbed_emb_sent(wv, WEATLIST, dict_sent_tuple_count, None, None, array_gradients, 1, sent)
+    perturbed_emb = get_perturbed_emb_sent(
+        wv, WEATLIST, dict_sent_tuple_count, None, None, array_gradients, 1, sent)
 
-  t1 = np.array([get_emb_pert(perturbed_emb, word) for word in S])
-  t2 = np.array([get_emb_pert(perturbed_emb, word) for word in T])
-  att1 = np.array([get_emb_pert(perturbed_emb, word) for word in A])
-  att2 = np.array([get_emb_pert(perturbed_emb, word) for word in B])
+    t1 = np.array([get_emb_pert(perturbed_emb, word) for word in S])
+    t2 = np.array([get_emb_pert(perturbed_emb, word) for word in T])
+    att1 = np.array([get_emb_pert(perturbed_emb, word) for word in A])
+    att2 = np.array([get_emb_pert(perturbed_emb, word) for word in B])
 
-  eff_size_pert = effect_sizev2(t1, t2, att1, att2)
+    eff_size_pert = effect_sizev2(t1, t2, att1, att2)
 
+    # effect size perturbed
+    #ef_perturbed = effect_size(S, T, A, B, get_emb_pert, perturbed_emb)
+    # differential bias
+    #diff_bias = ef_full-eff_size_pert
+    # print("Effect size full corpus: ", ef_full)
+    # print("Differential bias: ", diff_bias)
 
-  # effect size perturbed
-  #ef_perturbed = effect_size(S, T, A, B, get_emb_pert, perturbed_emb)
-  # differential bias
-  #diff_bias = ef_full-eff_size_pert
-  # print("Effect size full corpus: ", ef_full)
-  # print("Differential bias: ", diff_bias)
-
-
-  print("Effect size perturbed corpus: ", eff_size_pert)
-  print(' '.join(sent))
+    print("Effect size perturbed corpus: ", eff_size_pert)
+    print(' '.join(sent))
 
 
 S = ["science", "technology", "physics", "chemistry", "einstein", "nasa",
-    "experiment", "astronomy"]
-T = ["poetry", "art", "shakespeare", "dance", "literature", "novel", "symphony", "drama"]
+     "experiment", "astronomy"]
+T = ["poetry", "art", "shakespeare", "dance",
+     "literature", "novel", "symphony", "drama"]
 A = ["male", "man", "boy", "brother", "he", "him", "his", "son"]
 B = ["female", "woman", "girl", "sister", "she", "her", "hers", "daughter"]
 
 WEATLIST = S.copy() + T.copy() + A.copy() + B.copy()
 
 
+with open('./content/data_correct_post_train/vocab_v2.pkl', 'rb') as han:
+    vocab = pickle.load(han)
 
-with open('vocab_v2.pkl', 'rb') as han:
-  vocab = pickle.load(han)
+with open('./content/data_correct_post_train/inv_vocab_v2.pkl', 'rb') as han:
+    inv_vocab = pickle.load(han)
 
-with open('inv_vocab_v2.pkl', 'rb') as han:
-  inv_vocab = pickle.load(han)
-
-with open('unigram_counts_v2.pkl', 'rb') as han:
-  unigram_counts = pickle.load(han)
+with open('./content/data_correct_post_train/unigram_counts_v2.pkl', 'rb') as han:
+    unigram_counts = pickle.load(han)
 
 weights = [torch.from_numpy(np.load('syn0_final_torch.npy')).requires_grad_().cuda(),
-           torch.from_numpy(np.load('syn1_final_torch.npy')).requires_grad_().cuda() ]
-
+           torch.from_numpy(np.load('syn1_final_torch.npy')).requires_grad_().cuda()]
 
 
 BATCH_SIZE = 256
@@ -386,17 +390,19 @@ print(T_B)
 
 for sentence in [S_A, T_A, S_B, T_B]:
 
-  sent_tuples = get_tuples(sentence, vocab)
-  grads = {inp_label[0]: get_grad(inp_label, unigram_counts, weights, vocab) for inp_label in sent_tuples}
+    sent_tuples = get_tuples(sentence, vocab)
+    grads = {(inp_label[0], inp_label[1]): get_grad(
+        inp_label, unigram_counts, weights, vocab) for inp_label in sent_tuples}
 
-  diz_count_sent = Counter(sent_tuples)
+    diz_count_sent = Counter(sent_tuples)
 
-  diz_sent_reshaped = np.array([[x[0][2], ((x[0][0], x[0][1]), x[1])] for x in list(diz_count_sent.items())])
+    diz_sent_reshaped = np.array(
+        [[x[0][2], ((x[0][0], x[0][1]), x[1])] for x in list(diz_count_sent.items())])
 
-  sentDict = defaultdict(list)
-  for key, val in diz_sent_reshaped:
-      sentDict[key].append(tuple(val))
+    sentDict = defaultdict(list)
+    for key, val in diz_sent_reshaped:
+        sentDict[key].append(tuple(val))
 
-  do_eff_size(sentence, WEATLIST, sentDict, grads, wv)
+    do_eff_size(sentence, WEATLIST, sentDict, grads, wv)
 
-grads # array gradients
+grads  # array gradients
