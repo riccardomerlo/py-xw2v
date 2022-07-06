@@ -1,7 +1,4 @@
 # -*- coding: utf-8 -*-
-
-
-#from word_vectors import WordVectors
 import numpy as np
 import pickle
 
@@ -11,7 +8,6 @@ import torch.utils.data
 import gc
 import os
 import sys
-
 
 import random
 
@@ -137,8 +133,9 @@ def _negative_sampling_loss_torch(input, label, batch_size, unigram_counts, nega
         syn0 = weights[0]
         syn1 = weights[1]
 
-        true_classes_array = torch.unsqueeze(torch.tensor(label), 1)
-        inputs_array = torch.unsqueeze(torch.tensor(input), 1)
+
+        true_classes_array = torch.unsqueeze(torch.tensor(label).clone().detach(), 1)
+        inputs_array = torch.unsqueeze(torch.tensor(input).clone().detach(), 1)
         sampled_values = fixed_unigram_candidate_sampler(true_classes=true_classes_array,
                                                          inputs=inputs_array,
                                                          num_samples=negatives,
@@ -154,7 +151,7 @@ def _negative_sampling_loss_torch(input, label, batch_size, unigram_counts, nega
         # sampled_syn1 = syn1[sampled_values]
         list_sampled_syn1 = []
         for batch in sampled_values:
-            sampled_syn1_batch = torch.index_select(syn1, 0, torch.tensor(torch.from_numpy(batch).cuda(), dtype=torch.int32))
+            sampled_syn1_batch = torch.index_select(syn1, 0, torch.tensor(torch.from_numpy(batch).cuda(), dtype=torch.int32).clone().detach())
             list_sampled_syn1.append(sampled_syn1_batch)
             del sampled_syn1_batch
 
@@ -187,15 +184,18 @@ def _negative_sampling_loss_torch(input, label, batch_size, unigram_counts, nega
             [true_cross_entropy.unsqueeze(1), sampled_cross_entropy], dim=1)
         return loss
 
-def get_losses(t, weights, unigram_counts):
+def get_losses(t, batch_size, weights, unigram_counts):
 
-  loss = _negative_sampling_loss_torch(t[0], t[1], 1,
+  _input = [x[0] for x in t]
+  _label = [x[1] for x in t]
+
+  loss = _negative_sampling_loss_torch(_input, _label, batch_size,
                     unigram_counts, 5, weights, len(unigram_counts))
 
   return loss.sum()
 
-def get_grad(loss, t, weights):
-  print(loss.requires_grad)
+def get_grad(loss, target, weights):
+  #print(loss.requires_grad)
   grad = torch.autograd.grad(
       loss.requires_grad_(), 
       weights[0], 
@@ -203,7 +203,7 @@ def get_grad(loss, t, weights):
       retain_graph=True # obbligatorio per fare grad ancora
       )[0]
   
-  return grad[t[0]]
+  return grad[target]
 
 def get_batch_hessian(target, grads, weights):
   hessian = []
@@ -217,7 +217,7 @@ def get_batch_hessian(target, grads, weights):
       hessian.append(hess_i[target])
 
       torch.cuda.empty_cache()
-      print('done', step)
+      #print('done', step)
 
   hess = np.stack(hessian)
 
@@ -228,31 +228,38 @@ def get_batch_hessian(target, grads, weights):
     
   return hess
 
-def get_full_hessian(target, weights, unigram_counts):
+def batch(iterable, n=1):
+    l = len(iterable)
+    for ndx in range(0, l, n):
+        yield iterable[ndx:min(ndx + n, l)]
+
+def get_full_hessian(target, batch_size, weights, unigram_counts):
 
   target_tuples = [x for x in tuple_set_1 if x[0] == target]
 
-  print(len(target_tuples))
+  print('# instances', len(target_tuples))
   losses = None
   grads = None
   hessians = []
-  for step, t in enumerate(target_tuples):
+  tuple_batched = batch(target_tuples, batch_size)
 
-    print('loss', step)
+  for step, t in enumerate(tuple_batched):
+
+    #print('loss', step)
     if losses == None:
-      losses = get_losses(t, weights, unigram_counts)
+      losses = get_losses(t, batch_size, weights, unigram_counts)
     else:
-      losses += get_losses(t, weights, unigram_counts) 
+      losses += get_losses(t, batch_size, weights, unigram_counts) 
     
-    if step % 200 == 0 and step != 0:
-      grads = get_grad(losses, t, weights)
+    gc.collect()
+    if (step % 10 == 0 or step == int(len(target_tuples)/batch_size)):  
+      grads = get_grad(losses, target, weights)
+      print(grads.shape)
       del losses
-      gc.collect()
-      torch.cuda.empty_cache()
+      #gc.collect()
+      #torch.cuda.empty_cache()
 
       hessians.append(get_batch_hessian(target, grads, weights))
-      # print(hessians)
-      # qua in teoria potrei salvare l'hessiana del batch su file... se ho problemi di ram
 
       del grads
       gc.collect()
@@ -267,9 +274,10 @@ def get_full_hessian(target, weights, unigram_counts):
 
 MAIN
 """
-
+batch_size = 16384
 for _target in list_approx_words: # for each WEAT word
-  hess = get_full_hessian(_target, weights, unigram_counts_v2)
+  hess = get_full_hessian(_target, batch_size, weights, unigram_counts_v2)
+  print("done", _target)
   with open(str(_target)+"_hessian.pkl", "wb") as han:
     pickle.dump(hess, han)
 
