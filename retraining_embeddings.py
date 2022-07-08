@@ -58,7 +58,6 @@ def get_emb_og(wv, word):
     # same as wv[word]
     return wv._syn0_final[wv._rev_vocab[word]]
 
-
 def cos_similarity(tar, att):
     '''
     Calculates the cosine similarity of the target variable vs the attribute
@@ -134,7 +133,7 @@ WEATLIST = S+T+A+B
 
 text = read_corpus('./corpus/nyt_dal_90_ad_oggi.txt')
 
-with open("./content/data_correct_post_train/data_v2.pkl", "rb") as f:
+with open("data.pkl", "rb") as f:
   data = pickle.load(f)
 
 with open("unigram_counts.pkl", "rb") as f:
@@ -146,60 +145,31 @@ with open("vocab.pkl", "rb") as f:
 with open("inv_vocab.pkl", "rb") as f:
   inv_vocab = pickle.load(f)
 
-S_A = S.copy()+A.copy()
-random.seed(0)
-random.shuffle(S_A)
-print(S_A)
-
-def get_tuples(sentence, vocab):
-  _data = []
-
-  window = 5
-  for i, t in enumerate(sentence):
-      
-      contexts = list(range(i-window, i + window+1))
-      contexts = [c for c in contexts if c >=
-                  0 and c != i and c < len(sentence)]
-      for c in contexts:
-          # TARGET, CONTEXT, nsent
-          _data.append((vocab[t], vocab[sentence[c]], 1))
-
-  return _data
-
-sent_tuples = get_tuples(S_A, vocab)
 
 list_index_weat = []
 for word in S+T+A+B:
   list_index_weat.append(vocab[word])
 
-
 list_approx_words = list(set(list_index_weat.copy()))
 
-flat_data = [x for y in data for x in y] # 6 secondi
-for tu in sent_tuples:
-    flat_data.append(np.array([tu[0], tu[1], -1]))
-tuple_set = {(x[0], x[1]) for x in iter(flat_data)} # 32 secondi
-tuple_set_1 = [x for x in tuple_set if x[0] in list_approx_words] #1m 7s secondi
-
-tuple_set_ord = tuple_set_1.copy()
-tuple_set_ord.sort(key=lambda i:i[1],reverse=True)
-
-
 list_sim_sent_retrain = []
-sent_id =  -1
+sent_id = 534994
 sent_text = text[sent_id]
+print(sent_text)
 
 log_per_steps= 1000#10000  # Every `log_per_steps` steps to log the value of loss to be minimized.
 
-#flat_data = [x for xs in data for x in xs]
-#flat_data_rt = [x for x in flat_data if x[2]!=sent_id]
-data_rt = split_given_size(flat_data, BATCH_SIZE)
+flat_data = [x for xs in data for x in xs]
+
+flat_data_rt = [x for x in flat_data if x[2]!=sent_id]
+
+data_rt = split_given_size(flat_data_rt, BATCH_SIZE)
 data_rt = [x for x in data_rt if len(x) == BATCH_SIZE]
 unigram_counts_rt = unigram_counts.copy()
 vocab_rt = vocab.copy()
 for key in vocab:
     if key in sent_text:
-        unigram_counts_rt[vocab[key]] = unigram_counts[vocab[key]]+1
+        unigram_counts_rt[vocab[key]] = unigram_counts[vocab[key]]-1
 inv_vocab_rt = {v: k for k, v in vocab_rt.items()}
 
         #data_rt, unigram_counts_rt, vocab_rt, inv_vocab_rt = create_skipgram(text_rt, WINDOW_SIZE, WEATLIST, MIN_FREQ, SAMPLING_RATE, EPOCHS, BATCH_SIZE)
@@ -218,7 +188,7 @@ word2vec._inv_vocab = inv_vocab_rt
 word2vec._text = text
 
 word2vec.build_weights()
-word2vec.train(EPOCHS, save=False)
+word2vec.train(EPOCHS, save=True, retrain=True)
 
 print("Re-training for sentence "+str(sent_id)+" completed")
 

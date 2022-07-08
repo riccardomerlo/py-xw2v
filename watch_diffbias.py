@@ -202,15 +202,12 @@ def effect_sizev2(t1, t2, att1, att2):
     combined = np.concatenate([t1, t2])
     num1 = np.mean([association(target, att1, att2) for target in t1])
     num2 = np.mean([association(target, att1, att2) for target in t2])
-    print("num1: ", num1)
-    print("num2: ", num2)
     combined_association = np.array(
         [association(target, att1, att2) for target in combined])
 
     dof = combined_association.shape[0]
     denom = np.sqrt(
         ((dof-1)*np.std(combined_association, ddof=1) ** 2) / (dof-1))
-    print("denomin: ", denom)
     effect_size = (num1 - num2) / denom
 
     return effect_size
@@ -260,6 +257,15 @@ def get_hessian(word):
         hessian_word = pickle.load(f)
     return hessian_word
 
+def get_hessian_newsent(word):
+    """
+    Creates dictionary of hessian matrices.
+    list_index_weat: list
+    """
+    idx_w = vocab[word]
+    with open(str(idx_w)+'_hessian_newsent_SA.pkl', "rb") as f:
+        hessian_word = pickle.load(f)
+    return hessian_word
 
 def get_emb_pert(perturbed_emb, word):
     """
@@ -270,10 +276,11 @@ def get_emb_pert(perturbed_emb, word):
     return perturbed_emb[word]
 
 
-def get_perturbed_emb_sent(wv, WEATLIST, diz_sent_tuple, diz_tuple_sent, diz_mapping, arr_grad, sent_id, sent_text):
+def get_perturbed_emb_sent(wv, WEATLIST, diz_sent_tuple, diz_tuple_sent, diz_mapping, arr_grad, sent_id, 
+                            sent_text, newsent=False):
     diz_grad_sent = get_sent_grad(
         diz_sent_tuple, diz_mapping, arr_grad, sent_id)
-
+    print(diz_grad_sent.keys())
     perturbed_emb = {}  # dictionary {word: emb}
     #hessian_diz = get_hessian_words(list_index_weat, diz_tuple_sent, diz_mapping, arr_grad)
     for word in WEATLIST:
@@ -284,7 +291,10 @@ def get_perturbed_emb_sent(wv, WEATLIST, diz_sent_tuple, diz_tuple_sent, diz_map
                 # gradient for the word of interest
                 grad_sent = diz_grad_sent[word]
                 # print(grad_sent)
-                hessian = np.linalg.inv(get_hessian(word))
+                if newsent==False:
+                    hessian = np.linalg.inv(get_hessian(word))
+                else:
+                    hessian = np.linalg.inv(get_hessian_newsent(word))
             else:  # in case the term is appearing only in the sentence to be removed
                 grad_sent = np.zeros(HIDDEN_SIZE)
                 hessian = np.zeros((HIDDEN_SIZE, HIDDEN_SIZE))
@@ -305,16 +315,29 @@ def do_eff_size(sent, WEATLIST, dict_sent_tuple_count, array_gradients, wv):
     att1 = np.array([get_emb_pert(perturbed_emb, word) for word in A])
     att2 = np.array([get_emb_pert(perturbed_emb, word) for word in B])
 
+    simSA = np.array([mean_cos_similarity(tar, att1) for tar in t1]).mean()
+    simTA = np.array([mean_cos_similarity(tar, att1) for tar in t2]).mean()
+    simSB = np.array([mean_cos_similarity(tar, att2) for tar in t1]).mean()
+    simTB = np.array([mean_cos_similarity(tar, att2) for tar in t2]).mean()
+
     eff_size_pert = effect_sizev2(t1, t2, att1, att2)
 
-    # effect size perturbed
-    #ef_perturbed = effect_size(S, T, A, B, get_emb_pert, perturbed_emb)
-    # differential bias
-    #diff_bias = ef_full-eff_size_pert
-    # print("Effect size full corpus: ", ef_full)
-    # print("Differential bias: ", diff_bias)
+    perturbed_emb_newsent = get_perturbed_emb_sent(
+        wv, WEATLIST, dict_sent_tuple_count, None, None, array_gradients, 1, sent, newsent=True)
+
+    print("cosine similarity: ")
+    print("he ", cos_similarity(get_emb_pert(perturbed_emb, "he"), get_emb_pert(perturbed_emb_newsent, "he")))
+    print("science ", cos_similarity(get_emb_pert(perturbed_emb, "science"), get_emb_pert(perturbed_emb_newsent, "science")))
+    print("him ", cos_similarity(get_emb_pert(perturbed_emb, "him"), get_emb_pert(perturbed_emb_newsent, "him")))
+    print("nasa ", cos_similarity(get_emb_pert(perturbed_emb, "nasa"), get_emb_pert(perturbed_emb_newsent, "nasa")))
+    print("she ", cos_similarity(get_emb_pert(perturbed_emb, "she"), get_emb_pert(perturbed_emb_newsent, "she")))
+    print("art ", cos_similarity(get_emb_pert(perturbed_emb, "art"), get_emb_pert(perturbed_emb_newsent, "art")))
 
     print("Effect size perturbed corpus: ", eff_size_pert)
+    print("Similarity S-A: ", simSA)
+    print("Similarity T-A: ", simTA)
+    print("Similarity S-B: ", simSB)
+    print("Similarity T-B: ", simTB)
     print(' '.join(sent))
 
 
@@ -388,7 +411,44 @@ random.seed(3)
 random.shuffle(T_B)
 print(T_B)
 
-for sentence in [S_A, T_A, S_B, T_B]:
+
+# compute original effect size and similarities:
+t1 = np.array([get_emb_og(wv, word) for word in S])
+t2 = np.array([get_emb_og(wv, word) for word in T])
+att1 = np.array([get_emb_og(wv, word) for word in A])
+att2 = np.array([get_emb_og(wv, word) for word in B])
+
+simSA = np.array([mean_cos_similarity(tar, att1) for tar in t1]).mean()
+simTA = np.array([mean_cos_similarity(tar, att1) for tar in t2]).mean()
+simSB = np.array([mean_cos_similarity(tar, att2) for tar in t1]).mean()
+simTB = np.array([mean_cos_similarity(tar, att2) for tar in t2]).mean()
+
+print("effect size corpus orginale: ", effect_sizev2(t1, t2, att1, att2))
+print("similarity S-A origin: ", simSA)
+print("similarity T-A origin: ", simTA)
+print("similarity S-B origin: ", simSB)
+print("similarity T-B origin: ", simTB)
+
+# for sentence in [S_A, T_A, S_B, T_B]:
+
+#     sent_tuples = get_tuples(sentence, vocab)
+#     grads = {(inp_label[0], inp_label[1]): get_grad(
+#         inp_label, unigram_counts, weights, vocab) for inp_label in sent_tuples}
+
+#     diz_count_sent = Counter(sent_tuples)
+
+#     diz_sent_reshaped = np.array(
+#         [[x[0][2], ((x[0][0], x[0][1]), x[1])] for x in list(diz_count_sent.items())])
+
+#     sentDict = defaultdict(list)
+#     for key, val in diz_sent_reshaped:
+#         sentDict[key].append(tuple(val))
+
+#     do_eff_size(sentence, WEATLIST, sentDict, grads, wv)
+
+#grads  # array gradients
+
+for sentence in [S_A]:
 
     sent_tuples = get_tuples(sentence, vocab)
     grads = {(inp_label[0], inp_label[1]): get_grad(
@@ -405,4 +465,3 @@ for sentence in [S_A, T_A, S_B, T_B]:
 
     do_eff_size(sentence, WEATLIST, sentDict, grads, wv)
 
-grads  # array gradients

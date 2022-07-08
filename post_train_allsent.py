@@ -171,13 +171,10 @@ def effect_sizev2(t1, t2, att1, att2):
     combined = np.concatenate([t1, t2])
     num1 = np.mean([association(target, att1, att2) for target in t1])
     num2 = np.mean([association(target, att1, att2) for target in t2])
-    print("num1: ", num1)
-    print("num2: ", num2)
     combined_association = np.array([association(target, att1, att2) for target in combined])
 
     dof = combined_association.shape[0]
     denom = np.sqrt(((dof-1)*np.std(combined_association, ddof=1) ** 2 ) / (dof-1))
-    print("denomin: ", denom)
     effect_size = (num1 - num2) / denom
 
     return effect_size
@@ -265,57 +262,103 @@ def get_perturbed_emb_sent(wv, WEATLIST, diz_sent_tuple, diz_tuple_sent, diz_map
                 hessian = np.zeros((HIDDEN_SIZE, HIDDEN_SIZE))
             # decide whether grad_sent should be multiplied by V or not - technically yes to fully follow Brunet et al.
             emb = emb + (1/V)*np.dot(hessian, grad_sent)
+            #emb = emb + (1/V)*grad_sent
         perturbed_emb[word] = emb
 
     return perturbed_emb
 
-l0 = []
 
-list_cossim = []
-list_sent = []
-list_sentid = []
-list_diffbias = []
+# list_sent = []
+# list_sentid = []
+# list_diffbias = []
+# list_simSA = []
+# list_simTA = []
+# list_simSB = []
+# list_simTB = []
 
-i=0
-for sent_id in range(len(text)):
-    if sent_id == 125583:
-      sent_text = text[sent_id]
-      print(sent_text)
-      first=True
-      for weat_w in WEATLIST:
-          if weat_w in sent_text and first==True:
-              perturbed_emb = get_perturbed_emb_sent(wv, WEATLIST, dict_sent_tuple_count, dict_tuple_sent_count, dict_all_tuples, array_gradients, sent_id, sent_text)
 
-              t1 = np.array([get_emb_pert(perturbed_emb, word) for word in S])
-              t2 = np.array([get_emb_pert(perturbed_emb, word) for word in T])
-              att1 = np.array([get_emb_pert(perturbed_emb, word) for word in A])
-              att2 = np.array([get_emb_pert(perturbed_emb, word) for word in B])
+# i=0
+# for sent_id in range(len(text)):
+#     sent_text = text[sent_id]
+#     first=True
+#     for weat_w in WEATLIST:
+#         if weat_w in sent_text and first==True:
+#             perturbed_emb = get_perturbed_emb_sent(wv, WEATLIST, dict_sent_tuple_count, dict_tuple_sent_count, dict_all_tuples, array_gradients, sent_id, sent_text)
 
-              eff_size_pert = effect_sizev2(t1, t2, att1, att2)
+#             t1 = np.array([get_emb_pert(perturbed_emb, word) for word in S])
+#             t2 = np.array([get_emb_pert(perturbed_emb, word) for word in T])
+#             att1 = np.array([get_emb_pert(perturbed_emb, word) for word in A])
+#             att2 = np.array([get_emb_pert(perturbed_emb, word) for word in B])
 
-              l0.append(eff_size_pert)
-              # effect size perturbed
-              #ef_perturbed = effect_size(S, T, A, B, get_emb_pert, perturbed_emb)
+#             eff_size_pert = effect_sizev2(t1, t2, att1, att2)
 
-              # differential bias
-              diff_bias = ef_full-eff_size_pert
+#             list_simSA.append(np.array([mean_cos_similarity(tar, att1) for tar in t1]).mean())
+#             list_simTA.append(np.array([mean_cos_similarity(tar, att1) for tar in t2]).mean())
+#             list_simSB.append(np.array([mean_cos_similarity(tar, att2) for tar in t1]).mean())
+#             list_simTB.append(np.array([mean_cos_similarity(tar, att2) for tar in t2]).mean())
+#             # effect size perturbed
+#             #ef_perturbed = effect_size(S, T, A, B, get_emb_pert, perturbed_emb)
 
-             # print("Sentence: ", sent_id, sent_text)
-             # print("Effect size full corpus: ", ef_full)
-             # print("Effect size perturbed corpus: ", eff_size_pert)
-             # print("Differential bias: ", diff_bias)
+#             # differential bias
+#             diff_bias = ef_full-eff_size_pert
 
-              list_sent.append(' '.join(sent_text))
-              list_sentid.append(sent_id)
-              list_diffbias.append(diff_bias)          
-              i+=1
+#             # print("Sentence: ", sent_id, sent_text)
+#             # print("Effect size full corpus: ", ef_full)
+#             # print("Effect size perturbed corpus: ", eff_size_pert)
+#             # print("Differential bias: ", diff_bias)
 
-              if i%1000 == 0:
-                    print(i)
-              first=False
-df = pd.DataFrame(columns=['sent_id', 'sent_text', 'diff_bias'])
-df['sent_id'] = list_sentid
-df['sent_text'] = list_sent
-df['diff_bias'] = list_diffbias
+#             list_sent.append(' '.join(sent_text))
+#             list_sentid.append(sent_id)
+#             list_diffbias.append(diff_bias)          
+#             i+=1
 
-df.to_csv("differ_bias.csv", index=False)
+#             if i%1000 == 0:
+#                 print(i)
+#             first=False
+
+# df = pd.DataFrame(columns=['sent_id', 'sent_text', 'diff_bias'])
+# df['sent_id'] = list_sentid
+# df['sent_text'] = list_sent
+# df['diff_bias'] = list_diffbias
+# df['sim S-A'] = list_simSA
+# df['sim T-A'] = list_simTA
+# df['sim S-B'] = list_simSB
+# df['sim T-B'] = list_simTB
+
+# df.to_csv("differ_bias.csv", index=False)
+
+
+sent_id = 534994
+sent_text = text[sent_id]
+
+perturbed_emb = get_perturbed_emb_sent(wv, WEATLIST, dict_sent_tuple_count, dict_tuple_sent_count, dict_all_tuples, array_gradients, sent_id, sent_text)
+
+t1 = np.array([get_emb_pert(perturbed_emb, word) for word in S])
+t2 = np.array([get_emb_pert(perturbed_emb, word) for word in T])
+att1 = np.array([get_emb_pert(perturbed_emb, word) for word in A])
+att2 = np.array([get_emb_pert(perturbed_emb, word) for word in B])
+
+eff_size_pert = effect_sizev2(t1, t2, att1, att2)
+
+syn0_retrain = np.load('syn0_final_torch_retrain.npy')
+
+wv_r = WordVectors(syn0_retrain, vocab_words)
+
+# cosine similarity his, him, science
+print('his :', cos_similarity(get_emb_pert(perturbed_emb, "his"), get_emb_og(wv_r, "his")))
+print('him :', cos_similarity(get_emb_pert(perturbed_emb, "him"), get_emb_og(wv_r, "him")))
+print('science :', cos_similarity(get_emb_pert(perturbed_emb, "science"), get_emb_og(wv_r, "science")))
+
+
+# effect size perturbed
+#ef_perturbed = effect_size(S, T, A, B, get_emb_pert, perturbed_emb)
+
+# differential bias
+diff_bias = ef_full-eff_size_pert
+
+print("Sentence: ", sent_id, sent_text)
+print("Effect size full corpus: ", ef_full)
+print("Effect size perturbed corpus: ", eff_size_pert)
+print("Differential bias: ", diff_bias)
+    
+
