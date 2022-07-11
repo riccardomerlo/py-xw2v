@@ -15,35 +15,30 @@ torch.set_default_tensor_type(torch.cuda.FloatTensor if torch.cuda.is_available(
 
 
 def fixed_unigram_candidate_sampler(
-        true_classes: Union[np.array, torch.Tensor],
+        true_classes,
+        inputs,
         num_samples: int,
         unigrams: List[Union[int, float]],
         distortion: float = 1.):
 
     if isinstance(true_classes, torch.Tensor):
         true_classes = true_classes.detach().cpu().numpy()
-    if true_classes.shape[0] != num_samples:
-        raise ValueError(
-            'true_classes must be a 2D matrix with shape (num_samples, num_true)')
+    if isinstance(inputs, torch.Tensor):
+        inputs = inputs.detach().cpu().numpy()
     unigrams = np.array(unigrams)
     if distortion != 1.:
         unigrams = unigrams.astype(np.float64) ** distortion
-    # print('unigrams:', unigrams)
-    indices = np.arange(num_samples)
-    result = np.zeros(num_samples, dtype=np.int64)
-    while len(indices) > 0:
-        # print('len(indices):', len(indices))
+    #print(indices)
+    result = np.zeros((len(inputs), num_samples))
+    for idx in range(len(inputs)):
+        value = inputs[idx]
+        unigrams_new = unigrams.copy()
+        unigrams_new[true_classes[idx]] = 0 # così non prende la true class come possibile negative per se stessa
+        torch.manual_seed(value)
         sampler = torch.utils.data.WeightedRandomSampler(
-            unigrams, len(indices))
+            unigrams, num_samples)
         candidates = np.array(list(sampler))
-        candidates = np.reshape(candidates, (len(indices), 1))
-        # print('candidates:', candidates)
-        # print('true_classes:', true_classes[indices, :])
-        result[indices] = candidates.T
-        mask = (candidates == true_classes[indices, :])
-        mask = mask.sum(1).astype(np.bool)
-        # print('mask:', mask)
-        indices = indices[mask]
+        result[idx] = candidates
     return result
 
 
@@ -124,6 +119,7 @@ def _true_loss_torch(input, label, batch_size, unigram_counts, negatives, weight
     loss = true_cross_entropy.unsqueeze(0)
     return loss
 
+
 def _negative_sampling_loss_torch(input, label, batch_size, unigram_counts, negatives, weights, vocab_len):
         """Builds the negative sampling loss.
         Args:
@@ -139,19 +135,14 @@ def _negative_sampling_loss_torch(input, label, batch_size, unigram_counts, nega
         syn0 = weights[0].cuda()
         syn1 = weights[1].cuda()
 
-        torch.manual_seed(np.array(input).mean())  # TODO change seed?
-        true_classes_array = torch.unsqueeze(
-            torch.tensor(np.repeat(label, negatives)), 1)
-        # print(true_classes_array.shape)
+        true_classes_array = torch.unsqueeze(torch.tensor(label), 1)
+        inputs_array = torch.unsqueeze(torch.tensor(input), 1)
         sampled_values = fixed_unigram_candidate_sampler(true_classes=true_classes_array,
-                                                         num_samples=negatives*batch_size,
+                                                         inputs=inputs_array,
+                                                         num_samples=negatives,
                                                          unigrams=unigram_counts,
                                                          distortion=0.75)
-        sampled_values = split_given_size(sampled_values, batch_size)
-        sampled_values = np.array(
-            [x for x in sampled_values if len(x) == batch_size])
-        sampled_values = torch.from_numpy(sampled_values).cuda()
-        # sampled_mat = torch.reshape(sampled_values, (batch_size, negatives))
+
 
         inputs_syn0 = torch.index_select(
             syn0, 0, torch.from_numpy(np.array(input)).cuda())
@@ -161,16 +152,15 @@ def _negative_sampling_loss_torch(input, label, batch_size, unigram_counts, nega
         # sampled_syn1 = syn1[sampled_values]
         list_sampled_syn1 = []
         for batch in sampled_values:
-            sampled_syn1_batch = torch.index_select(syn1, 0, batch)
+            sampled_syn1_batch = torch.index_select(syn1, 0, torch.tensor(torch.from_numpy(batch).cuda(), dtype=torch.int32))
             list_sampled_syn1.append(sampled_syn1_batch)
 
         sampled_syn1 = torch.stack(list_sampled_syn1, 0)
 
         true_logits = torch.sum(torch.multiply(inputs_syn0, true_syn1), dim=1)
         true_logits.requires_grad_()
-
         sampled_logits = torch.einsum('ijk,ikl->il', inputs_syn0.unsqueeze(1),
-                                      sampled_syn1.permute(1, 2, 0))
+                                      sampled_syn1.permute(0,2,1))
         sampled_logits.requires_grad_()
 
         loss = torch.nn.BCEWithLogitsLoss(reduction='none')
