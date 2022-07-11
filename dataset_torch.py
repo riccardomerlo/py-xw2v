@@ -35,14 +35,18 @@ def subsampling(vocab, whitelist=[], rate=0.0001):
 
 def subsample_prob(prob):
     """
+    prob is high for low freq words
+
     returns boolean:
         -True if given word is going to be sampled -> rimuovere
         -False if given word is not going to be sampled
     
     computes probability for given word, according to formula..., 
+
     """
 
-    if np.random.random() < prob:
+
+    if np.random.random() > prob:
         # si toglie
         return True
     #non si toglie
@@ -55,7 +59,7 @@ def _subsample_prob(frac, rate=1e-3):
 def cache_subsample_prob(vocab, rate=1e-3):
     """computes subsample prob for each word in vocab
     """
-    len_vocab = len(vocab)
+    len_vocab = np.sum([vocab[word] for word in vocab.keys()])
     cache = {word: _subsample_prob(vocab[word]/ len_vocab, rate) for word in vocab.keys()}
     return cache
 
