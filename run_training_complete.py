@@ -11,7 +11,7 @@ torch.set_default_tensor_type(torch.cuda.FloatTensor if torch.cuda.is_available(
 Define CONSTANTS
 """
 
-BATCH_SIZE = 256
+BATCH_SIZE = 'auto'#256
 NEGATIVES = 5
 EPOCHS = 3
 SAMPLING_RATE = 1E-3
@@ -49,19 +49,21 @@ Build DATASET
 """
 word2vec.build_dataset(text, WINDOW_SIZE, WEATLIST.copy(), MIN_FREQ, SAMPLING_RATE)
 
-with open("to_remove_words.pkl", "wb") as han:
+to_save_dir = 'autobatch/'
+
+with open(to_save_dir+"to_remove_words.pkl", "wb") as han:
     pickle.dump(word2vec._to_remove_words, han)
-with open("to_keep_words.pkl", "wb") as han:
+with open(to_save_dir+"to_keep_words.pkl", "wb") as han:
     pickle.dump(word2vec._to_keep_words, han)
-with open("text.pkl", "wb") as han:
+with open(to_save_dir+"text.pkl", "wb") as han:
     pickle.dump(word2vec._text, han)
-with open("data.pkl", "wb") as han:
+with open(to_save_dir+"data.pkl", "wb") as han:
     pickle.dump(word2vec._data, han)
-with open("vocab.pkl", "wb") as han:
+with open(to_save_dir+"vocab.pkl", "wb") as han:
     pickle.dump(word2vec._vocab, han)
-with open("inv_vocab.pkl", "wb") as han:
+with open(to_save_dir+"inv_vocab.pkl", "wb") as han:
     pickle.dump(word2vec._inv_vocab, han)
-with open("unigram_counts.pkl", "wb") as han:
+with open(to_save_dir+"unigram_counts.pkl", "wb") as han:
     pickle.dump(word2vec._unigram_counts, han)
 
 """

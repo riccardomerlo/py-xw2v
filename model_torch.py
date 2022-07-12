@@ -108,6 +108,9 @@ class Word2VecModel(torch.nn.Module):
             syn0 = weights[0]
             syn1 = weights[1]
 
+        if self._batch_size == 'auto':
+            batch_size = len(inputs)
+
         torch.manual_seed(np.array(inputs).mean())  # TODO change seed?
         true_classes_array = torch.unsqueeze(
             torch.tensor(np.repeat(labels, negatives)), 1)
@@ -196,6 +199,7 @@ class Word2VecModel(torch.nn.Module):
                 sentence = get_sampled_sent(n_sent, sentence, subsample_cache)
                 #cache_sentence.append(sentence)
 
+            _sent_batch = [] #support array to keep all tuples of single sentence
             for i, t in enumerate(iter(sentence)):
                 
                 window = get_dynamic_window(n_sent, i, max_window)    
@@ -205,20 +209,37 @@ class Word2VecModel(torch.nn.Module):
                             0 and c != i and c < len(sentence)]
                 for c in contexts:
                     # TARGET, CONTEXT, nsent
-                    _data.append([self._vocab[t], self._vocab[sentence[c]], n_sent])
-            
+                    if self._batch_size == 'auto':
+                        _sent_batch.append([self._vocab[t], self._vocab[sentence[c]], n_sent])
+                    else:
+                        _data.append([self._vocab[t], self._vocab[sentence[c]], n_sent])
+            if self._batch_size == 'auto':
+                _data.append(_sent_batch)
             if n_sent % step_log == 0:
                 print(int(n_sent/len(self._text)*100), end=' ')
         
-        #shuffle data before batching
-        random.seed(self._random_seed) #ensures reproducibility
-        random.shuffle(_data)
+
+        if self._batch_size == 'auto':
+            #each sentence is a batch
+            #each item is a sentence
+
+            #shuffle data
+            random.seed(self._random_seed) #ensures reproducibility
+            random.shuffle(_data)
+
+            #batch size is the number of tuples of each sentence
+            _data_batch = _data
+
+        else:
+            #shuffle data before batching
+            random.seed(self._random_seed) #ensures reproducibility
+            random.shuffle(_data)
+            
+            #batch _inputs and _labels
+            _data_batch = split_given_size(_data, self._batch_size)
         
-        #batch _inputs and _labels
-        _data_batch = split_given_size(_data, self._batch_size)
-       
-        #remove batch if size < batch_size
-        _data_batch = [x for x in _data_batch if len(x) == self._batch_size]
+            #remove batch if size < batch_size
+            _data_batch = [x for x in _data_batch if len(x) == self._batch_size]
        
         #repeat epoch times (done during training)
 
