@@ -237,7 +237,7 @@ class Word2VecModel(torch.nn.Module):
         return iter(self._data)
 
 
-    def train(self, epochs, save=True):
+    def train(self, epochs, save=True, retrain=False):
         """trains model
 
         Returns:
@@ -294,11 +294,12 @@ class Word2VecModel(torch.nn.Module):
         syn0_final = self.syn0.cpu().detach().numpy()
         syn1_final = self.syn1.cpu().detach().numpy()
 
-        if save:
+        if save and retrain==False:
             np.save('syn0_final_torch', syn0_final)
             np.save('syn1_final_torch', syn1_final)
+        elif save and retrain:
+            np.save('syn0_final_torch_retrain', syn0_final)
+            np.save('syn1_final_torch_retrain', syn1_final)            
 
             
-
-
         return [syn0_final, syn1_final]
