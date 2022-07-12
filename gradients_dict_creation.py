@@ -20,17 +20,23 @@ import sys
 
 import datetime;
 import matplotlib.pyplot as plt
-import seaborn as sns
+# import seaborn as sns
 import random
 from collections import defaultdict
 from collections import Counter
 
 
 from dataset_torch import read_corpus, split_given_size, get_vocab, apply_reduction, subsample_prob, cache_subsample_prob, get_sampled_sent, get_dynamic_window
-from after_training_torch import _negative_sampling_loss_torch, fixed_unigram_candidate_sampler
+from after_training_torch import _negative_sampling_loss_torch, fixed_unigram_candidate_sampler, _full_loss_torch
 
 torch.set_default_tensor_type(torch.cuda.FloatTensor if torch.cuda.is_available()
                                                      else torch.FloatTensor)
+
+
+MODE = 'train' # 'post'
+LOSS = 'FULL' # 'NG'
+
+print("MODE", MODE, "---- LOSS", LOSS)
 
 """# Load data"""
 
@@ -165,19 +171,19 @@ def build_dataset(text, max_window, whitelist=[], min_freq=1, sampling_rate=1e-3
 """
 Build DATASET
 """
-# data, vocab, inv_vocab, unigram_counts = build_dataset(text, WINDOW_SIZE, WEATLIST.copy(), MIN_FREQ, 0, dynamic_window=False)
+data, vocab, inv_vocab, unigram_counts = build_dataset(text, WINDOW_SIZE, WEATLIST.copy(), MIN_FREQ, 0, dynamic_window=False)
 
-# with open("data_v2.pkl", "wb") as han:
-#     pickle.dump(data, han)
-# with open("vocab_v2.pkl", "wb") as han:
-#     pickle.dump(vocab, han)
-# with open("inv_vocab_v2.pkl", "wb") as han:
-#     pickle.dump(inv_vocab, han)
-# with open("unigram_counts_v2.pkl", "wb") as han:
-#     pickle.dump(unigram_counts, han)
+with open("data_v2.pkl", "wb") as han:
+    pickle.dump(data, han)
+with open("vocab_v2.pkl", "wb") as han:
+    pickle.dump(vocab, han)
+with open("inv_vocab_v2.pkl", "wb") as han:
+    pickle.dump(inv_vocab, han)
+with open("unigram_counts_v2.pkl", "wb") as han:
+    pickle.dump(unigram_counts, han)
 
 
-"""If post training data is needed:"""
+# """If post training data is needed:"""
 
 # with open("data_v2.pkl", "rb") as han:
 #     data = pickle.load(han)
@@ -191,8 +197,9 @@ Build DATASET
 
 """If training data is needed (dynamic window and subsampling frequent words):"""
 
-with open("/home/rmerlo/py-xw2v/autobatch/data.pkl", "rb") as f:
-  data = pickle.load(f)
+if MODE == 'train':
+  with open("/home/rmerlo/py-xw2v/autobatch/data.pkl", "rb") as f:
+    data = pickle.load(f)
 
 
 flat_data = [x for y in data for x in y] # 3 secondi
@@ -221,16 +228,15 @@ tupleDict_reordered = {tuple(k): tupleDict[tuple(k)] for k in tuple_set_1}
 
 """Save dictionary as pickle"""
 
+if MODE == 'post':
 #post training data
-# with open("dict_tuple_sent_count.pkl", "wb") as f:
-#   pickle.dump(tupleDict_reordered, f)
+  with open("dict_tuple_sent_count.pkl", "wb") as f:
+    pickle.dump(tupleDict_reordered, f)
 
+if MODE == 'train':
 # training data
-with open("dict_tuple_sent_count_traindata.pkl", "wb") as f:
-  pickle.dump(tupleDict_reordered, f)
-
-# with open("dict_tuple_sent_count.pkl", "rb") as f:
-#  tupleDict_reordered = pickle.load(f)
+  with open("dict_tuple_sent_count_traindata.pkl", "wb") as f:
+    pickle.dump(tupleDict_reordered, f)
 
 """Dizionario per frasi"""
 
@@ -243,13 +249,15 @@ for key, val in diz_sent_reshaped:
 
 """Save """
 
+if MODE == 'post':
 # post training data
-# with open("dict_sent_tuple_count.pkl", "wb") as f:
-#   pickle.dump(sentDict, f)
+  with open("dict_sent_tuple_count.pkl", "wb") as f:
+    pickle.dump(sentDict, f)
 
+if MODE == 'train':
 # training data
-with open("dict_sent_tuple_count_traindata.pkl", "wb") as f:
-  pickle.dump(sentDict, f)
+  with open("dict_sent_tuple_count_traindata.pkl", "wb") as f:
+    pickle.dump(sentDict, f)
 
 """## Compute gradient"""
 
@@ -269,18 +277,6 @@ full_batch_flat = [x for y in full_batch for x in y]
 
 weat_tuple_counts = Counter([inv_vocab[x[0]] for x in full_batch_flat])
 
-# import matplotlib.pyplot as plt
-# import seaborn as sns
-# plt.rcParams["figure.figsize"] = (20,10)
-
-# labels, values = zip(*weat_tuple_counts.items())
-
-# indexes = np.arange(len(labels))
-# width = 1
-
-# plt.bar(indexes, values, width, edgecolor='black')
-# plt.xticks(indexes, labels, rotation=45)
-# plt.show()
 
 array_reduced_full = np.zeros((len(full_batch_flat), HIDDEN_SIZE))
 
@@ -291,8 +287,14 @@ for batch in full_batch:
   inputs = [x[0] for x in batch]
   labels = [x[1] for x in batch]
 
-  loss_ng = _negative_sampling_loss_torch(inputs, labels, len(inputs),
-                                          unigram_counts, 5, weights, len(vocab)) # change con vocab_v2 if post train data
+
+  if LOSS == 'NG':
+    loss_ng = _negative_sampling_loss_torch(inputs, labels, len(inputs),
+                                            unigram_counts, 5, weights, len(vocab)) # change con vocab_v2 if post train data
+
+  if LOSS == 'FULL':
+    loss_ng = _full_loss_torch(inputs, labels, len(inputs),
+                                            unigram_counts, None, weights, len(vocab)) # change con vocab_v2 if post train data
 
   grad = torch.autograd.grad(loss_ng.sum(dim=1).reshape(1, len(inputs))[0],
                            weights[0], grad_outputs=torch.ones_like(loss_ng.sum(dim=1).reshape(1, len(inputs)))[0],
@@ -306,22 +308,26 @@ for batch in full_batch:
   i+=1
   print(i, datetime.datetime.now())
 
+if MODE == 'post':
 # post training data
-# with open("array_gradients_all_tuples.pkl", "wb") as f:
-#   pickle.dump(array_reduced_full, f)
+  with open("array_gradients_all_tuples.pkl", "wb") as f:
+    pickle.dump(array_reduced_full, f)
 
+if MODE == 'train':
 # training data
-with open("array_gradients_all_tuples_traindata.pkl", "wb") as f:
-  pickle.dump(array_reduced_full, f)
+  with open("array_gradients_all_tuples_traindata.pkl", "wb") as f:
+    pickle.dump(array_reduced_full, f)
 
 """## Save unique tuples and corresponding gradients index"""
 
 dict_tuple_index = {key: i for i, key in enumerate(full_batch_flat)}
 
+if MODE == 'post':
 # post training data
-# with open("dict_all_tuples.pkl", "wb") as f:
-#   pickle.dump(dict_tuple_index, f)
+  with open("dict_all_tuples.pkl", "wb") as f:
+    pickle.dump(dict_tuple_index, f)
 
+if MODE == 'train':
 # training data
-with open("dict_all_tuples_traindata.pkl", "wb") as f:
-  pickle.dump(dict_tuple_index, f)
+  with open("dict_all_tuples_traindata.pkl", "wb") as f:
+    pickle.dump(dict_tuple_index, f)

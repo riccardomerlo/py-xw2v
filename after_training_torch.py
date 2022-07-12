@@ -43,7 +43,7 @@ def fixed_unigram_candidate_sampler(
 
 
 def _full_loss_torch(input, label, batch_size, unigram_counts, negatives, weights, vocab_len):
-    """Builds the full loss. The batch_size is forced as 1 since we are post-training.
+    """Builds the full loss. 
 
     Args:
       input: int of shape [batch_size] => 1 (skip_gram)
@@ -57,23 +57,30 @@ def _full_loss_torch(input, label, batch_size, unigram_counts, negatives, weight
     syn0 = weights[0].cuda()
     syn1 = weights[1].cuda()
 
-    contexts = []
-
-    vocab_tmp = vocab.copy()
+    contexts = []   
+    
     # remove label which is already true label from other labels
-    vocab_tmp.remove(label)
-    contexts.append(np.array(list(vocab_tmp)))
+    for inp in label:
+        vocab_tmp = vocab.copy()
+        vocab_tmp.remove(inp)
+        contexts.append(np.array(list(vocab_tmp)))
 
     inputs_syn0 = torch.index_select(
         syn0, 0, torch.from_numpy(np.array(input)).cuda())
-    context_syn1 = torch.index_select(syn1, 0, torch.from_numpy(contexts[0]).cuda())
+    
+    list_sampled_syn1 = []
+    for con in contexts:
+        sampled_syn1_batch = torch.index_select(syn1, 0, torch.tensor(torch.from_numpy(con).cuda(), dtype=torch.int32))
+        list_sampled_syn1.append(sampled_syn1_batch)
+
+    context_syn1 = torch.stack(list_sampled_syn1, 0)
     true_syn1 = torch.index_select(syn1, 0, torch.from_numpy(np.array(label)).cuda())
 
     true_logits = torch.sum(torch.multiply(inputs_syn0, true_syn1), dim=1)
     true_logits.requires_grad_()
 
     context_logits = torch.einsum('ijk,ikl->il', inputs_syn0.unsqueeze(1),
-                                  context_syn1.unsqueeze(0).permute(0, 2, 1))
+                                  context_syn1.permute(0, 2, 1))
     context_logits.requires_grad_()
 
     loss = torch.nn.BCEWithLogitsLoss(reduction='none')
@@ -85,7 +92,7 @@ def _full_loss_torch(input, label, batch_size, unigram_counts, negatives, weight
     # context_cross_entropy.backward()
 
     loss = torch.concat(
-        [true_cross_entropy.unsqueeze(0), context_cross_entropy], dim=1)
+        [true_cross_entropy.unsqueeze(1), context_cross_entropy], dim=1)
     return loss
 
 
