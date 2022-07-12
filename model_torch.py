@@ -282,7 +282,9 @@ class Word2VecModel(torch.nn.Module):
             
             #TODO salvare [self._vocab[t], self._vocab[sentence[c]]]
             #TODO costruire input, label e poi ripeto epoch volte, quindi calcolo batch e addestro
-
+                if len(batch) == 0:
+                    continue
+                
                 target_batch = [x[0] for x in batch]
                 context_batch = [x[1] for x in batch] 
                 n_sent = [x[2] for x in batch]
