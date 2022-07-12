@@ -11,13 +11,14 @@ torch.set_default_tensor_type(torch.cuda.FloatTensor if torch.cuda.is_available(
 Define CONSTANTS
 """
 
-BATCH_SIZE = 'auto'#256
+BATCH_SIZE = 256
 NEGATIVES = 5
 EPOCHS = 3
 SAMPLING_RATE = 1E-3
 MIN_FREQ = 60
 WINDOW_SIZE = 5
 LEARNING_RATE = 1E-3
+HIDDEN_SIZE = 300
 # liste_termini_weat
 S = ["science", "technology", "physics", "chemistry", "einstein", "nasa", 
     "experiment", "astronomy"]
@@ -38,7 +39,7 @@ text = read_corpus('./corpus/nyt_dal_90_ad_oggi.txt')
 """
 Create MODEL
 """
-word2vec = Word2VecModel(hidden_size=100,
+word2vec = Word2VecModel(hidden_size=HIDDEN_SIZE,
                          batch_size=BATCH_SIZE,
                          negatives=NEGATIVES,
                          power=0.75,
@@ -49,21 +50,19 @@ Build DATASET
 """
 word2vec.build_dataset(text, WINDOW_SIZE, WEATLIST.copy(), MIN_FREQ, SAMPLING_RATE)
 
-to_save_dir = 'autobatch/'
-
-with open(to_save_dir+"to_remove_words.pkl", "wb") as han:
+with open("to_remove_words_batch1.pkl", "wb") as han:
     pickle.dump(word2vec._to_remove_words, han)
-with open(to_save_dir+"to_keep_words.pkl", "wb") as han:
+with open("to_keep_words_batch1.pkl", "wb") as han:
     pickle.dump(word2vec._to_keep_words, han)
-with open(to_save_dir+"text.pkl", "wb") as han:
+with open("text_batch1.pkl", "wb") as han:
     pickle.dump(word2vec._text, han)
-with open(to_save_dir+"data.pkl", "wb") as han:
+with open("data_batch1.pkl", "wb") as han:
     pickle.dump(word2vec._data, han)
-with open(to_save_dir+"vocab.pkl", "wb") as han:
+with open("vocab_batch1.pkl", "wb") as han:
     pickle.dump(word2vec._vocab, han)
-with open(to_save_dir+"inv_vocab.pkl", "wb") as han:
+with open("inv_vocab_batch1.pkl", "wb") as han:
     pickle.dump(word2vec._inv_vocab, han)
-with open(to_save_dir+"unigram_counts.pkl", "wb") as han:
+with open("unigram_counts_batch1.pkl", "wb") as han:
     pickle.dump(word2vec._unigram_counts, han)
 
 """

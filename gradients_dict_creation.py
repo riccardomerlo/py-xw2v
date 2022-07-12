@@ -41,7 +41,7 @@ SAMPLING_RATE = 1E-3
 MIN_FREQ = 60
 WINDOW_SIZE = 5
 LEARNING_RATE = 1E-3
-HIDDEN_SIZE = 300
+HIDDEN_SIZE = 100
 _random_seed = 0
 # liste_termini_weat
 S = ["science", "technology", "physics", "chemistry", "einstein", "nasa",
@@ -51,23 +51,23 @@ A = ["male", "man", "boy", "brother", "he", "him", "his", "son"]
 B = ["female", "woman", "girl", "sister", "she", "her", "hers", "daughter"]
 WEATLIST = S+T+A+B
 
-syn0 = np.load('syn0_final_torch.npy')
-syn1 = np.load('syn1_final_torch.npy')
+syn0 = np.load('/home/rmerlo/py-xw2v/autobatch/syn0_final_torch.npy')
+syn1 = np.load('/home/rmerlo/py-xw2v/autobatch/syn1_final_torch.npy')
 
 
-with open("vocab.pkl", "rb") as v:
+with open("/home/rmerlo/py-xw2v/autobatch/vocab.pkl", "rb") as v:
   vocab = pickle.load(v)
 
-with open("unigram_counts.pkl", "rb") as u:
+with open("/home/rmerlo/py-xw2v/autobatch/unigram_counts.pkl", "rb") as u:
   unigram_counts = pickle.load(u)
 
-with open("inv_vocab.pkl", "rb") as iv:
+with open("/home/rmerlo/py-xw2v/autobatch/inv_vocab.pkl", "rb") as iv:
   inv_vocab = pickle.load(iv)
 
 """
 Read CORPUS
 """
-text = read_corpus('./nyt_dal_90_ad_oggi.txt')
+text = read_corpus('./corpus/nyt_dal_90_ad_oggi.txt')
 
 list_index_weat = []
 for word in S+T+A+B:
@@ -165,33 +165,33 @@ def build_dataset(text, max_window, whitelist=[], min_freq=1, sampling_rate=1e-3
 """
 Build DATASET
 """
-data, vocab, inv_vocab, unigram_counts = build_dataset(text, WINDOW_SIZE, WEATLIST.copy(), MIN_FREQ, 0, dynamic_window=False)
+# data, vocab, inv_vocab, unigram_counts = build_dataset(text, WINDOW_SIZE, WEATLIST.copy(), MIN_FREQ, 0, dynamic_window=False)
 
-with open("data_v2.pkl", "wb") as han:
-    pickle.dump(data, han)
-with open("vocab_v2.pkl", "wb") as han:
-    pickle.dump(vocab, han)
-with open("inv_vocab_v2.pkl", "wb") as han:
-    pickle.dump(inv_vocab, han)
-with open("unigram_counts_v2.pkl", "wb") as han:
-    pickle.dump(unigram_counts, han)
+# with open("data_v2.pkl", "wb") as han:
+#     pickle.dump(data, han)
+# with open("vocab_v2.pkl", "wb") as han:
+#     pickle.dump(vocab, han)
+# with open("inv_vocab_v2.pkl", "wb") as han:
+#     pickle.dump(inv_vocab, han)
+# with open("unigram_counts_v2.pkl", "wb") as han:
+#     pickle.dump(unigram_counts, han)
 
 
 """If post training data is needed:"""
 
-with open("/content/content/data_correct_post_train_new/data_v2.pkl", "rb") as han:
-    data = pickle.load(han)
-with open("/content/content/data_correct_post_train_new/vocab_v2.pkl", "rb") as han:
-    vocab_v2 = pickle.load(han)
-with open("/content/content/data_correct_post_train_new/inv_vocab_v2.pkl", "rb") as han:
-    inv_vocab_v2 = pickle.load(han)
-with open("/content/content/data_correct_post_train_new/unigram_counts_v2.pkl", "rb") as han:
-    unigram_counts_v2 = pickle.load(han)
+# with open("data_v2.pkl", "rb") as han:
+#     data = pickle.load(han)
+# with open("vocab_v2.pkl", "rb") as han:
+#     vocab_v2 = pickle.load(han)
+# with open("inv_vocab_v2.pkl", "rb") as han:
+#     inv_vocab_v2 = pickle.load(han)
+# with open("unigram_counts_v2.pkl", "rb") as han:
+#     unigram_counts_v2 = pickle.load(han)
 
 
 """If training data is needed (dynamic window and subsampling frequent words):"""
 
-with open("data.pkl", "rb") as f:
+with open("/home/rmerlo/py-xw2v/autobatch/data.pkl", "rb") as f:
   data = pickle.load(f)
 
 
@@ -221,9 +221,9 @@ tupleDict_reordered = {tuple(k): tupleDict[tuple(k)] for k in tuple_set_1}
 
 """Save dictionary as pickle"""
 
-# post training data
-with open("dict_tuple_sent_count.pkl", "wb") as f:
-  pickle.dump(tupleDict_reordered, f)
+#post training data
+# with open("dict_tuple_sent_count.pkl", "wb") as f:
+#   pickle.dump(tupleDict_reordered, f)
 
 # training data
 with open("dict_tuple_sent_count_traindata.pkl", "wb") as f:
@@ -244,8 +244,8 @@ for key, val in diz_sent_reshaped:
 """Save """
 
 # post training data
-with open("dict_sent_tuple_count.pkl", "wb") as f:
-  pickle.dump(sentDict, f)
+# with open("dict_sent_tuple_count.pkl", "wb") as f:
+#   pickle.dump(sentDict, f)
 
 # training data
 with open("dict_sent_tuple_count_traindata.pkl", "wb") as f:
@@ -269,20 +269,20 @@ full_batch_flat = [x for y in full_batch for x in y]
 
 weat_tuple_counts = Counter([inv_vocab[x[0]] for x in full_batch_flat])
 
-import matplotlib.pyplot as plt
-import seaborn as sns
-plt.rcParams["figure.figsize"] = (20,10)
+# import matplotlib.pyplot as plt
+# import seaborn as sns
+# plt.rcParams["figure.figsize"] = (20,10)
 
-labels, values = zip(*weat_tuple_counts.items())
+# labels, values = zip(*weat_tuple_counts.items())
 
-indexes = np.arange(len(labels))
-width = 1
+# indexes = np.arange(len(labels))
+# width = 1
 
-plt.bar(indexes, values, width, edgecolor='black')
-plt.xticks(indexes, labels, rotation=45)
-plt.show()
+# plt.bar(indexes, values, width, edgecolor='black')
+# plt.xticks(indexes, labels, rotation=45)
+# plt.show()
 
-array_reduced_full = np.zeros((len(full_batch_flat), 300))
+array_reduced_full = np.zeros((len(full_batch_flat), HIDDEN_SIZE))
 
 # ci mette circa 6m a fare calcolo+salvataggio
 i=0
@@ -307,8 +307,8 @@ for batch in full_batch:
   print(i, datetime.datetime.now())
 
 # post training data
-with open("array_gradients_all_tuples.pkl", "wb") as f:
-  pickle.dump(array_reduced_full, f)
+# with open("array_gradients_all_tuples.pkl", "wb") as f:
+#   pickle.dump(array_reduced_full, f)
 
 # training data
 with open("array_gradients_all_tuples_traindata.pkl", "wb") as f:
@@ -319,8 +319,8 @@ with open("array_gradients_all_tuples_traindata.pkl", "wb") as f:
 dict_tuple_index = {key: i for i, key in enumerate(full_batch_flat)}
 
 # post training data
-with open("dict_all_tuples.pkl", "wb") as f:
-  pickle.dump(dict_tuple_index, f)
+# with open("dict_all_tuples.pkl", "wb") as f:
+#   pickle.dump(dict_tuple_index, f)
 
 # training data
 with open("dict_all_tuples_traindata.pkl", "wb") as f:

@@ -122,7 +122,7 @@ SAMPLING_RATE = 1E-3
 MIN_FREQ = 60
 WINDOW_SIZE = 5
 LEARNING_RATE = 1E-3
-HIDDEN_SIZE = 300
+HIDDEN_SIZE = 100
 # liste_termini_weat
 S = ["science", "technology", "physics", "chemistry", "einstein", "nasa",
     "experiment", "astronomy"]
@@ -133,16 +133,16 @@ WEATLIST = S+T+A+B
 
 text = read_corpus('./corpus/nyt_dal_90_ad_oggi.txt')
 
-with open("data.pkl", "rb") as f:
+with open("/home/rmerlo/py-xw2v/autobatch/data.pkl", "rb") as f:
   data = pickle.load(f)
 
-with open("unigram_counts.pkl", "rb") as f:
+with open("/home/rmerlo/py-xw2v/autobatch/unigram_counts.pkl", "rb") as f:
   unigram_counts = pickle.load(f)
 
-with open("vocab.pkl", "rb") as f:
+with open("/home/rmerlo/py-xw2v/autobatch/vocab.pkl", "rb") as f:
   vocab = pickle.load(f)
 
-with open("inv_vocab.pkl", "rb") as f:
+with open("/home/rmerlo/py-xw2v/autobatch/inv_vocab.pkl", "rb") as f:
   inv_vocab = pickle.load(f)
 
 
@@ -153,18 +153,21 @@ for word in S+T+A+B:
 list_approx_words = list(set(list_index_weat.copy()))
 
 list_sim_sent_retrain = []
-sent_id = 534994
+sent_id = 37232
 sent_text = text[sent_id]
 print(sent_text)
 
 log_per_steps= 1000#10000  # Every `log_per_steps` steps to log the value of loss to be minimized.
 
-flat_data = [x for xs in data for x in xs]
+# flat_data = [x for xs in data for x in xs]
 
-flat_data_rt = [x for x in flat_data if x[2]!=sent_id]
+# print([(inv_vocab[x[0]], inv_vocab[x[1]]) for x in flat_data if x[2]==sent_id])
+# flat_data_rt = [x for x in flat_data if x[2]!=sent_id]
 
-data_rt = split_given_size(flat_data_rt, BATCH_SIZE)
-data_rt = [x for x in data_rt if len(x) == BATCH_SIZE]
+# data_rt = split_given_size(flat_data_rt, BATCH_SIZE)
+# data_rt = [x for x in data_rt if len(x) == BATCH_SIZE]
+
+data_rt = [x for x in data if len(x) > 0 and x[0][2]!=sent_id]
 unigram_counts_rt = unigram_counts.copy()
 vocab_rt = vocab.copy()
 for key in vocab:
@@ -174,8 +177,8 @@ inv_vocab_rt = {v: k for k, v in vocab_rt.items()}
 
         #data_rt, unigram_counts_rt, vocab_rt, inv_vocab_rt = create_skipgram(text_rt, WINDOW_SIZE, WEATLIST, MIN_FREQ, SAMPLING_RATE, EPOCHS, BATCH_SIZE)
 
-word2vec = Word2VecModel(hidden_size=300,
-                         batch_size=BATCH_SIZE,
+word2vec = Word2VecModel(hidden_size=HIDDEN_SIZE,
+                         batch_size="auto",
                          negatives=NEGATIVES,
                          power=0.75,
                          alpha=LEARNING_RATE)
@@ -188,7 +191,7 @@ word2vec._inv_vocab = inv_vocab_rt
 word2vec._text = text
 
 word2vec.build_weights()
-word2vec.train(EPOCHS, save=True, retrain=True)
+word2vec.train(EPOCHS, save=False, retrain=True)
 
 print("Re-training for sentence "+str(sent_id)+" completed")
 

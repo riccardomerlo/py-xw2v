@@ -89,7 +89,6 @@ class Word2VecModel(torch.nn.Module):
 
     def _negative_sampling_loss_torch(self, inputs, labels, batch_size, unigram_counts, negatives, weights=None):
         """Builds the negative sampling loss.
-
         Args:
           input: int of shape [batch_size] => 1 (skip_gram)
           label: int of shape [batch_size] => 1
@@ -97,7 +96,6 @@ class Word2VecModel(torch.nn.Module):
           unigram_counts: list of sorted counts of words in vocab
           negatives: number of negatives to consider
           weights: list of weights, syn0 and syn1 matrices
-
         Returns:
           loss: float tensor of shape [batch_size, vocab_size].
         """
@@ -258,9 +256,8 @@ class Word2VecModel(torch.nn.Module):
         return iter(self._data)
 
 
-    def train(self, epochs, save=True, retrain=False):
+    def train(self, epochs, save=True, retrain=False, save_batch1=False):
         """trains model
-
         Returns:
             syn0: target embeddings matrix
             syn1: context embeddings matrix
@@ -322,7 +319,10 @@ class Word2VecModel(torch.nn.Module):
             np.save('syn1_final_torch', syn1_final)
         elif save and retrain:
             np.save('syn0_final_torch_retrain', syn0_final)
-            np.save('syn1_final_torch_retrain', syn1_final)            
+            np.save('syn1_final_torch_retrain', syn1_final) 
+        elif save and save_batch1:
+            np.save('syn0_final_torch_batch1', syn0_final)
+            np.save('syn1_final_torch_batch1', syn1_final)            
 
             
         return [syn0_final, syn1_final]
