@@ -49,6 +49,7 @@ class Word2VecModel(torch.nn.Module):
     def __init__(self,
                  hidden_size=300,
                  batch_size=256,
+                 batch_n_sentence=1,
                  negatives=5,
                  power=0.75,
                  alpha=0.002,
@@ -58,10 +59,12 @@ class Word2VecModel(torch.nn.Module):
         
         self._hidden_size = hidden_size
         self._batch_size = batch_size
+        self._batch_n_sentence = batch_n_sentence
         self._negatives = negatives
         self._power = power
         self._alpha = alpha
         self._random_seed = random_seed
+        
 
         
 
@@ -116,7 +119,7 @@ class Word2VecModel(torch.nn.Module):
         sampled_values = fixed_unigram_candidate_sampler(true_classes=true_classes_array,
                                                          num_samples=negatives*batch_size,
                                                          unigrams=unigram_counts,
-                                                         distortion=0.75)
+                                                         distortion=self._power)
         sampled_values = split_given_size(sampled_values, batch_size)
         sampled_values = np.array(
             [x for x in sampled_values if len(x) == batch_size])
@@ -190,6 +193,7 @@ class Word2VecModel(torch.nn.Module):
         if self._sampling_rate != 0:
             subsample_cache = cache_subsample_prob(count_vocab, self._sampling_rate)
 
+
         #cache_sentence = []
         for n_sent, sentence in enumerate(self.get_text()):
             # subsample (rimuovo parole in base alla loro probabilità)
@@ -197,7 +201,8 @@ class Word2VecModel(torch.nn.Module):
                 sentence = get_sampled_sent(n_sent, sentence, subsample_cache)
                 #cache_sentence.append(sentence)
 
-            _sent_batch = [] #support array to keep all tuples of single sentence
+            if self._batch_n_sentence == 1:
+                _sent_batch = [] #support array to keep all tuples of single sentence
             for i, t in enumerate(iter(sentence)):
                 
                 window = get_dynamic_window(n_sent, i, max_window)    
@@ -211,11 +216,17 @@ class Word2VecModel(torch.nn.Module):
                         _sent_batch.append([self._vocab[t], self._vocab[sentence[c]], n_sent])
                     else:
                         _data.append([self._vocab[t], self._vocab[sentence[c]], n_sent])
-            if self._batch_size == 'auto':
+            if (self._batch_size == 'auto') and (self._batch_n_sentence == 1):
                 _data.append(_sent_batch)
+            
+            tmp_batch_sentence += 1
+            if self._batch_n_sentence < tmp_batch_sentence:
+                _data.append(_sent_batch)
+                _sent_batch = []
+                tmp_batch_sentence = 0
+            
             if n_sent % step_log == 0:
                 print(int(n_sent/len(self._text)*100), end=' ')
-        
 
         if self._batch_size == 'auto':
             #each sentence is a batch
