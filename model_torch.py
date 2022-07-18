@@ -195,6 +195,8 @@ class Word2VecModel(torch.nn.Module):
 
 
         #cache_sentence = []
+        _sent_batch = []
+        tmp_batch_sentence = 0
         for n_sent, sentence in enumerate(self.get_text()):
             # subsample (rimuovo parole in base alla loro probabilità)
             if self._sampling_rate != 0:
@@ -226,7 +228,7 @@ class Word2VecModel(torch.nn.Module):
                 tmp_batch_sentence = 0
             
             if n_sent % step_log == 0:
-                print(int(n_sent/len(self._text)*100), end=' ')
+                print(round(n_sent/len(self._text)*100, 2), end=' ')
 
         if self._batch_size == 'auto':
             #each sentence is a batch
