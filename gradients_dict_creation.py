@@ -40,7 +40,7 @@ print("MODE", MODE, "---- LOSS", LOSS)
 
 """# Load data"""
 
-BATCH_SIZE = 256
+BATCH_SIZE = 'auto'
 NEGATIVES = 5
 EPOCHS = 3
 SAMPLING_RATE = 1E-3
@@ -98,7 +98,7 @@ def get_text(text):
 
     return iter(text)
 
-def build_dataset(text, max_window, whitelist=[], min_freq=1, sampling_rate=1e-3, dynamic_window=True):
+def build_dataset(text, max_window, whitelist=[], min_freq=1, sampling_rate=1e-3, dynamic_window=True, batch_n_sentence=10):
     """
     Builds post training dataset by creating tuples that only contain weat words.
     """
@@ -131,10 +131,15 @@ def build_dataset(text, max_window, whitelist=[], min_freq=1, sampling_rate=1e-3
         subsample_cache = cache_subsample_prob(count_vocab, sampling_rate)
 
     #cache_sentence = []
+    _sent_batch = []
+    tmp_batch_sentence = 0
     for n_sent, sentence in enumerate(get_text(_text)):
         if sampling_rate != 0:
             sentence = get_sampled_sent(n_sent, sentence, subsample_cache)
             #cache_sentence.append(sentence)
+        
+        if batch_n_sentence == 1:
+            _sent_batch = [] #support array to keep all tuples of single sentence
         if contains_weat(sentence, whitelist):
           for i, t in enumerate(iter(sentence)):
 
@@ -147,20 +152,44 @@ def build_dataset(text, max_window, whitelist=[], min_freq=1, sampling_rate=1e-3
                           0 and c != i and c < len(sentence)]
               for c in contexts:
                   # TARGET, CONTEXT, nsent
-                  _data.append([_vocab[t], _vocab[sentence[c]], n_sent])
+                  if BATCH_SIZE == 'auto':
+                      _sent_batch.append([_vocab[t], _vocab[sentence[c]], n_sent])
+                  else:
+                      _data.append([_vocab[t], _vocab[sentence[c]], n_sent])
 
+          if (BATCH_SIZE == 'auto') and (batch_n_sentence == 1):
+              _data.append(_sent_batch)
+            
+          tmp_batch_sentence += 1
+          if batch_n_sentence < tmp_batch_sentence:
+              _data.append(_sent_batch)
+              _sent_batch = []
+              tmp_batch_sentence = 0
+          
           if n_sent % step_log == 0:
-              print(int(n_sent/len(_text)*100), end=' ')
+              print(round(n_sent/len(_text)*100, 2), end=' ')
 
-    #shuffle data before batching
-    random.seed(_random_seed) #ensures reproducibility
-    random.shuffle(_data)
+    if BATCH_SIZE == 'auto':
+        #each sentence is a batch
+        #each item is a sentence
 
-    #batch _inputs and _labels
-    _data_batch = split_given_size(_data, BATCH_SIZE)
+        #shuffle data
+        random.seed(_random_seed) #ensures reproducibility
+        random.shuffle(_data)
 
-    #remove batch if size < batch_size
-  #  _data_batch = [x for x in _data_batch if len(x) == BATCH_SIZE]
+        #batch size is the number of tuples of each sentence
+        _data_batch = _data
+
+    else:
+        #shuffle data before batching
+        random.seed(_random_seed) #ensures reproducibility
+        random.shuffle(_data)
+        
+        #batch _inputs and _labels
+        _data_batch = split_given_size(_data, BATCH_SIZE)
+    
+        #remove batch if size < batch_size
+        _data_batch = [x for x in _data_batch if len(x) == BATCH_SIZE]
 
     #repeat epoch times (done during training)
 
