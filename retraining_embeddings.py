@@ -122,7 +122,7 @@ SAMPLING_RATE = 1E-3
 MIN_FREQ = 60
 WINDOW_SIZE = 5
 LEARNING_RATE = 1E-3
-HIDDEN_SIZE = 100
+HIDDEN_SIZE = 300
 # liste_termini_weat
 S = ["science", "technology", "physics", "chemistry", "einstein", "nasa",
     "experiment", "astronomy"]
@@ -133,16 +133,16 @@ WEATLIST = S+T+A+B
 
 text = read_corpus('./corpus/nyt_dal_90_ad_oggi.txt')
 
-with open("/home/rmerlo/py-xw2v/autobatch/data.pkl", "rb") as f:
+with open("data_300.pkl", "rb") as f:
   data = pickle.load(f)
 
-with open("/home/rmerlo/py-xw2v/autobatch/unigram_counts.pkl", "rb") as f:
+with open("unigram_counts_300.pkl", "rb") as f:
   unigram_counts = pickle.load(f)
 
-with open("/home/rmerlo/py-xw2v/autobatch/vocab.pkl", "rb") as f:
+with open("vocab_300.pkl", "rb") as f:
   vocab = pickle.load(f)
 
-with open("/home/rmerlo/py-xw2v/autobatch/inv_vocab.pkl", "rb") as f:
+with open("inv_vocab_300.pkl", "rb") as f:
   inv_vocab = pickle.load(f)
 
 
@@ -153,7 +153,7 @@ for word in S+T+A+B:
 list_approx_words = list(set(list_index_weat.copy()))
 
 list_sim_sent_retrain = []
-sent_id = 37232
+sent_id = 151078
 sent_text = text[sent_id]
 print(sent_text)
 
@@ -167,7 +167,7 @@ log_per_steps= 1000#10000  # Every `log_per_steps` steps to log the value of los
 # data_rt = split_given_size(flat_data_rt, BATCH_SIZE)
 # data_rt = [x for x in data_rt if len(x) == BATCH_SIZE]
 
-data_rt = [x for x in data if len(x) > 0 and x[0][2]!=sent_id]
+data_rt = [x for x in data if len(x) > 0 and x[0][2]!=sent_id] # remove whole batch related to sentence
 unigram_counts_rt = unigram_counts.copy()
 vocab_rt = vocab.copy()
 for key in vocab:
