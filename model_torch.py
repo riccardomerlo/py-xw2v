@@ -53,7 +53,8 @@ class Word2VecModel(torch.nn.Module):
                  negatives=5,
                  power=0.75,
                  alpha=0.002,
-                 random_seed=0):
+                 random_seed=0,
+                 output_dir=''):
 
         super(Word2VecModel, self).__init__()
         
@@ -64,6 +65,7 @@ class Word2VecModel(torch.nn.Module):
         self._power = power
         self._alpha = alpha
         self._random_seed = random_seed
+        self._output_dir = output_dir
         
 
         
@@ -328,14 +330,14 @@ class Word2VecModel(torch.nn.Module):
         syn1_final = self.syn1.cpu().detach().numpy()
 
         if save and retrain==False:
-            np.save('syn0_final_torch', syn0_final)
-            np.save('syn1_final_torch', syn1_final)
+            np.save(self._output_dir+'syn0_final_torch', syn0_final)
+            np.save(self._output_dir+'syn1_final_torch', syn1_final)
         elif save and retrain:
-            np.save('syn0_final_torch_retrain', syn0_final)
-            np.save('syn1_final_torch_retrain', syn1_final) 
+            np.save(self._output_dir+'syn0_final_torch_retrain', syn0_final)
+            np.save(self._output_dir+'syn1_final_torch_retrain', syn1_final) 
         elif save and save_batch1:
-            np.save('syn0_final_torch_batch1', syn0_final)
-            np.save('syn1_final_torch_batch1', syn1_final)            
+            np.save(self._output_dir+'syn0_final_torch_batch1', syn0_final)
+            np.save(self._output_dir+'syn1_final_torch_batch1', syn1_final)            
 
             
         return [syn0_final, syn1_final]

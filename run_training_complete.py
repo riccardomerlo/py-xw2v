@@ -53,7 +53,8 @@ word2vec = Word2VecModel(hidden_size=HIDDEN_SIZE,
                          batch_n_sentence=BATCH_N_SENTENCE,
                          negatives=NEGATIVES,
                          power=0.75,
-                         alpha=LEARNING_RATE)
+                         alpha=LEARNING_RATE,
+                         output_dir=output_dir)
 
 """
 Build DATASET
