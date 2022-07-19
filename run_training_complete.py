@@ -11,21 +11,20 @@ torch.set_default_tensor_type(torch.cuda.FloatTensor if torch.cuda.is_available(
 Define CONSTANTS
 """
 
-output_dir = 'batch_one/'
-
-# skip dataset creation if already done
-load_dataset = True 
+output_dir = 'test1/'
 
 import os
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
 
+# skip dataset creation if already done
+load_dataset = True 
 
 
-BATCH_SIZE = 1
+BATCH_SIZE = 256
 BATCH_N_SENTENCE = 10
-NEGATIVES = 5
-EPOCHS = 3
+NEGATIVES = 25
+EPOCHS = 5
 SAMPLING_RATE = 1E-3
 MIN_FREQ = 60
 WINDOW_SIZE = 5
@@ -39,9 +38,6 @@ A = ["male", "man", "boy", "brother", "he", "him", "his", "son"]
 B = ["female", "woman", "girl", "sister", "she", "her", "hers", "daughter"]
 
 WEATLIST = S+T+A+B
-
-
-
 
 
 """
@@ -69,19 +65,19 @@ if not load_dataset:
 
     word2vec.build_dataset(text, WINDOW_SIZE, WEATLIST.copy(), MIN_FREQ, SAMPLING_RATE)
 
-    with open(output_dir+"to_remove_words_batch1.pkl", "wb") as han:
+    with open(output_dir+"to_remove_words_shuffle.pkl", "wb") as han:
         pickle.dump(word2vec._to_remove_words, han)
-    with open(output_dir+"to_keep_words_batch1.pkl", "wb") as han:
+    with open(output_dir+"to_keep_words_shuffle.pkl", "wb") as han:
         pickle.dump(word2vec._to_keep_words, han)
-    with open(output_dir+"text_batch1.pkl", "wb") as han:
+    with open(output_dir+"text_shuffle.pkl", "wb") as han:
         pickle.dump(word2vec._text, han)
-    with open(output_dir+"data_batch1.pkl", "wb") as han:
+    with open(output_dir+"data_shuffle.pkl", "wb") as han:
         pickle.dump(word2vec._data, han)
-    with open(output_dir+"vocab_batch1.pkl", "wb") as han:
+    with open(output_dir+"vocab_shuffle.pkl", "wb") as han:
         pickle.dump(word2vec._vocab, han)
-    with open(output_dir+"inv_vocab_batch1.pkl", "wb") as han:
+    with open(output_dir+"inv_vocab_shuffle.pkl", "wb") as han:
         pickle.dump(word2vec._inv_vocab, han)
-    with open(output_dir+"unigram_counts_batch1.pkl", "wb") as han:
+    with open(output_dir+"unigram_counts_shuffle.pkl", "wb") as han:
         pickle.dump(word2vec._unigram_counts, han)
 
 """
@@ -91,11 +87,11 @@ Optional: Load DATASET
 if load_dataset:
     word2vec.load_data(
                     output_dir=output_dir,
-                    text="text_batch1.pkl", 
-                    data="data_batch1_fix.pkl",
-                    vocab="vocab_batch1.pkl",
-                    inv_vocab="inv_vocab_batch1.pkl",
-                    unigram_counts="unigram_counts_batch1.pkl" 
+                    text="text_shuffle.pkl", 
+                    data="data_shuffle.pkl",
+                    vocab="vocab_shuffle.pkl",
+                    inv_vocab="inv_vocab_shuffle.pkl",
+                    unigram_counts="unigram_counts_shuffle.pkl" 
                     )
 
 
