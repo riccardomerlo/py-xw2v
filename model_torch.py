@@ -224,7 +224,7 @@ class Word2VecModel(torch.nn.Module):
                 _data.append(_sent_batch)
             
             tmp_batch_sentence += 1
-            if self._batch_n_sentence < tmp_batch_sentence:
+            if (self._batch_size == 'auto') and (self._batch_n_sentence < tmp_batch_sentence):
                 _data.append(_sent_batch)
                 _sent_batch = []
                 tmp_batch_sentence = 0

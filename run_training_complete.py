@@ -13,6 +13,9 @@ Define CONSTANTS
 
 output_dir = 'test1/'
 
+# skip dataset creation if already done
+load_dataset = True 
+
 import os
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
@@ -59,22 +62,39 @@ word2vec = Word2VecModel(hidden_size=HIDDEN_SIZE,
 """
 Build DATASET
 """
-word2vec.build_dataset(text, WINDOW_SIZE, WEATLIST.copy(), MIN_FREQ, SAMPLING_RATE)
 
-with open(output_dir+"to_remove_words_batch1.pkl", "wb") as han:
-    pickle.dump(word2vec._to_remove_words, han)
-with open(output_dir+"to_keep_words_batch1.pkl", "wb") as han:
-    pickle.dump(word2vec._to_keep_words, han)
-with open(output_dir+"text_batch1.pkl", "wb") as han:
-    pickle.dump(word2vec._text, han)
-with open(output_dir+"data_batch1.pkl", "wb") as han:
-    pickle.dump(word2vec._data, han)
-with open(output_dir+"vocab_batch1.pkl", "wb") as han:
-    pickle.dump(word2vec._vocab, han)
-with open(output_dir+"inv_vocab_batch1.pkl", "wb") as han:
-    pickle.dump(word2vec._inv_vocab, han)
-with open(output_dir+"unigram_counts_batch1.pkl", "wb") as han:
-    pickle.dump(word2vec._unigram_counts, han)
+if not load_dataset:
+    word2vec.build_dataset(text, WINDOW_SIZE, WEATLIST.copy(), MIN_FREQ, SAMPLING_RATE)
+
+    with open(output_dir+"to_remove_words_batch1.pkl", "wb") as han:
+        pickle.dump(word2vec._to_remove_words, han)
+    with open(output_dir+"to_keep_words_batch1.pkl", "wb") as han:
+        pickle.dump(word2vec._to_keep_words, han)
+    with open(output_dir+"text_batch1.pkl", "wb") as han:
+        pickle.dump(word2vec._text, han)
+    with open(output_dir+"data_batch1.pkl", "wb") as han:
+        pickle.dump(word2vec._data, han)
+    with open(output_dir+"vocab_batch1.pkl", "wb") as han:
+        pickle.dump(word2vec._vocab, han)
+    with open(output_dir+"inv_vocab_batch1.pkl", "wb") as han:
+        pickle.dump(word2vec._inv_vocab, han)
+    with open(output_dir+"unigram_counts_batch1.pkl", "wb") as han:
+        pickle.dump(word2vec._unigram_counts, han)
+
+"""
+Optional: Load DATASET
+"""
+
+if load_dataset:
+    word2vec.load_data(
+                    output_dir=output_dir,
+                    text="text_batch1.pkl", 
+                    data="data_batch1.pkl",
+                    vocab="vocab_batch1.pkl",
+                    inv_vocab="inv_vocab_batch1.pkl",
+                    unigram_counts="unigram_counts_batch1.pkl" 
+                    )
+
 
 """
 Build WEIGHTS
