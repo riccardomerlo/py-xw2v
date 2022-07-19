@@ -19,6 +19,10 @@ def fixed_unigram_candidate_sampler(
     
     if isinstance(true_classes, torch.Tensor):
         true_classes = true_classes.cpu().detach().numpy()
+
+    #print(true_classes)
+    # print(true_classes.shape)
+    # print(num_samples)
     if true_classes.shape[0] != num_samples:
         raise ValueError(
             'true_classes must be a 2D matrix with shape (num_samples, num_true)')
@@ -115,6 +119,7 @@ class Word2VecModel(torch.nn.Module):
             batch_size = len(inputs)
 
         torch.manual_seed(np.array(inputs).mean())  # TODO change seed?
+
         true_classes_array = torch.unsqueeze(
             torch.tensor(np.repeat(labels, negatives)), 1)
         # print(true_classes_array.shape)
@@ -273,10 +278,12 @@ class Word2VecModel(torch.nn.Module):
         if vocab:
             with open(output_dir+vocab, "rb") as han:
                 self._vocab=pickle.load(han)
+            self._vocab_size = len(self._vocab)
             print(vocab, "loaded")
         if inv_vocab:
             with open(output_dir+inv_vocab, "rb") as han:
                 self._inv_vocab=pickle.load(han)
+            self._vocab_size = len(self._inv_vocab)
             print(inv_vocab, "loaded")
         if text:
             with open(output_dir+text, "rb") as han:
@@ -289,6 +296,7 @@ class Word2VecModel(torch.nn.Module):
         if unigram_counts:
             with open(output_dir+unigram_counts, "rb") as han:
                 self._unigram_counts=pickle.load(han)
+            self._vocab_size = len(self._unigram_counts)
             print(unigram_counts, "loaded")
 
     def get_text(self):
@@ -329,6 +337,7 @@ class Word2VecModel(torch.nn.Module):
                 target_batch = [x[0] for x in batch]
                 context_batch = [x[1] for x in batch] 
                 n_sent = [x[2] for x in batch]
+
                 # reset gradients
                 """
                 As of v1.7.0, Pytorch offers the option to reset the gradients 

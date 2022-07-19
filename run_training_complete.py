@@ -11,7 +11,7 @@ torch.set_default_tensor_type(torch.cuda.FloatTensor if torch.cuda.is_available(
 Define CONSTANTS
 """
 
-output_dir = 'test1/'
+output_dir = 'batch_one/'
 
 # skip dataset creation if already done
 load_dataset = True 
@@ -22,7 +22,7 @@ if not os.path.exists(output_dir):
 
 
 
-BATCH_SIZE = 'auto'
+BATCH_SIZE = 1
 BATCH_N_SENTENCE = 10
 NEGATIVES = 5
 EPOCHS = 3
@@ -40,11 +40,7 @@ B = ["female", "woman", "girl", "sister", "she", "her", "hers", "daughter"]
 
 WEATLIST = S+T+A+B
 
-"""
-Read CORPUS
-"""
-text = read_corpus('./corpus/nyt_dal_90_ad_oggi.txt')
-#text = read_corpus('./corpus/nyt_articles_v2.txt')
+
 
 
 
@@ -64,6 +60,13 @@ Build DATASET
 """
 
 if not load_dataset:
+
+    """
+    Read CORPUS
+    """
+    text = read_corpus('./corpus/nyt_dal_90_ad_oggi.txt')
+    #text = read_corpus('./corpus/nyt_articles_v2.txt')
+
     word2vec.build_dataset(text, WINDOW_SIZE, WEATLIST.copy(), MIN_FREQ, SAMPLING_RATE)
 
     with open(output_dir+"to_remove_words_batch1.pkl", "wb") as han:
@@ -89,7 +92,7 @@ if load_dataset:
     word2vec.load_data(
                     output_dir=output_dir,
                     text="text_batch1.pkl", 
-                    data="data_batch1.pkl",
+                    data="data_batch1_fix.pkl",
                     vocab="vocab_batch1.pkl",
                     inv_vocab="inv_vocab_batch1.pkl",
                     unigram_counts="unigram_counts_batch1.pkl" 
