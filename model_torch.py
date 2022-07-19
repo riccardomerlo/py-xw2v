@@ -261,7 +261,36 @@ class Word2VecModel(torch.nn.Module):
         #with open("new_sentence.pkl", "wb") as han:
         #    pickle.dump(cache_sentence, han)
 
-    
+    def load_data(
+                self,
+                output_dir='',
+                vocab=None,
+                inv_vocab=None,
+                text=None,
+                data=None,
+                unigram_counts=None
+                ):
+        if vocab:
+            with open(output_dir+vocab, "rb") as han:
+                self._vocab=pickle.load(han)
+            print(vocab, "loaded")
+        if inv_vocab:
+            with open(output_dir+inv_vocab, "rb") as han:
+                self._inv_vocab=pickle.load(han)
+            print(inv_vocab, "loaded")
+        if text:
+            with open(output_dir+text, "rb") as han:
+                self._text=pickle.load(han)
+            print(text, "loaded")
+        if data:
+            with open(output_dir+data, "rb") as han:
+                self._data=pickle.load(han)
+            print(data, "loaded")
+        if unigram_counts:
+            with open(output_dir+unigram_counts, "rb") as han:
+                self._unigram_counts=pickle.load(han)
+            print(unigram_counts, "loaded")
+
     def get_text(self):
 
         return iter(self._text)
