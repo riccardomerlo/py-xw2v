@@ -14,39 +14,42 @@ from after_training_torch import  _full_loss_torch
 import random
 
 MODE = 'train' # 'post', 'train'
-LOSS = 'FULL' # 'NG', 'FULL'
+LOSS = 'NG' # 'NG', 'FULL'
+NEGATIVES = 20
 
 print("MODE", MODE, "---- LOSS", LOSS)
+
+output_dir = '/home/apera/py-xw2v/test256_valerio+neg/'
 
 with open('./corpus/nyt_dal_90_ad_oggi.txt', 'r') as han:
   text = [x.strip() for x in han.readlines()]
 
 if MODE == 'post':
-  with open('dict_sent_tuple_count_300.pkl', 'rb') as han:
+  with open(output_dir+'dict_sent_tuple_count_shuffle.pkl', 'rb') as han:
     sent_tuple_count = pickle.load(han)
 if MODE == 'train':
-  with open('dict_sent_tuple_count_traindata_300.pkl', 'rb') as han:
+  with open(output_dir+'dict_sent_tuple_count_traindata_shuffle.pkl', 'rb') as han:
     sent_tuple_count = pickle.load(han)
 
 if MODE == 'post':
-  with open('data_v2_300.pkl', 'rb') as han: 
+  with open(output_dir+'data_v2.pkl', 'rb') as han: 
     data_v2 = pickle.load(han)
 if MODE == 'train':
-  with open('data_300.pkl', 'rb') as han: 
+  with open(output_dir+'data_shuffle.pkl', 'rb') as han: 
     data_v2 = pickle.load(han)
 
 
-with open('vocab_300.pkl', 'rb') as han:
+with open(output_dir + 'vocab_shuffle.pkl', 'rb') as han:
   vocab_v2 = pickle.load(han)
 
-with open('inv_vocab_300.pkl', 'rb') as han:
+with open(output_dir + 'inv_vocab_shuffle.pkl', 'rb') as han:
   inv_vocab_v2 = pickle.load(han)
 
-with open('unigram_counts_300.pkl', 'rb') as han:
+with open(output_dir + 'unigram_counts_shuffle.pkl', 'rb') as han:
   unigram_counts_v2 = pickle.load(han)
 
-weights = [torch.from_numpy(np.load('syn0_final_torch.npy')).requires_grad_().cuda(),
-           torch.from_numpy(np.load('syn1_final_torch.npy')).requires_grad_().cuda() ]
+weights = [torch.from_numpy(np.load(output_dir+'syn0_final_torch.npy')).requires_grad_().cuda(),
+           torch.from_numpy(np.load(output_dir+'syn1_final_torch.npy')).requires_grad_().cuda() ]
 
 
 
@@ -187,7 +190,7 @@ def get_losses(t, batch_size, weights, unigram_counts):
 
   if LOSS == 'NG':
     loss = _negative_sampling_loss_torch(_input, _label, batch_size, # to change if full_loss is needed
-                      unigram_counts, 5, weights, len(unigram_counts))
+                      unigram_counts, NEGATIVES, weights, len(unigram_counts))
   if LOSS == 'FULL':
     loss = _full_loss_torch(_input, _label, batch_size, unigram_counts, None, weights, len(unigram_counts)) 
 
@@ -270,24 +273,25 @@ def get_full_hessian(target, batch_size, weights, unigram_counts):
   return np.sum(hessians, axis=0)
 
 """
-
 MAIN
 """
-batch_size = 16 # dà errore di cuda out of memory
+batch_size = 16384 # dà errore di cuda out of memory
 for _target in list_approx_words: # for each WEAT word
   hess = get_full_hessian(_target, batch_size, weights, unigram_counts_v2)
   print("done", _target)
   if MODE == 'post' and LOSS == 'NG':
-    with open(str(_target)+"_hessian_300.pkl", "wb") as han:
+    with open(output_dir+str(_target)+"_hessian_shuffle.pkl", "wb") as han:
         pickle.dump(hess, han)
   if MODE == 'train' and LOSS == 'NG':
-    with open(str(_target)+"_hessian_traindata_300.pkl", "wb") as han:
+    with open(output_dir+str(_target)+"_hessian_traindata_shuffle.pkl", "wb") as han:
         pickle.dump(hess, han)
   if MODE == 'post' and LOSS == 'FULL':
-    with open(str(_target)+"_hessian_full_300.pkl", "wb") as han:
+    with open(output_dir+str(_target)+"_hessian_full_shuffle.pkl", "wb") as han:
         pickle.dump(hess, han)
   if MODE == 'train' and LOSS == 'FULL':
-    with open(str(_target)+"_hessian_traindata_full_300.pkl", "wb") as han:
+    with open(output_dir+str(_target)+"_hessian_traindata_full_shuffle.pkl", "wb") as han:
         pickle.dump(hess, han)
+
+
 
 
