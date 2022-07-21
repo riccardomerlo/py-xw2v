@@ -34,19 +34,20 @@ torch.set_default_tensor_type(torch.cuda.FloatTensor if torch.cuda.is_available(
 
 
 MODE = 'train' # 'post', 'train'
-LOSS = 'FULL' # 'NG', 'FULL'
+LOSS = 'NG' # 'NG', 'FULL'
 
 print("MODE", MODE, "---- LOSS", LOSS)
 
 """# Load data"""
 
-BATCH_SIZE = 'auto'
-NEGATIVES = 5
-EPOCHS = 3
+BATCH_SIZE = 256
+BATCH_N_SENTENCE = 10
+NEGATIVES = 20
+EPOCHS = 5
 SAMPLING_RATE = 1E-3
-MIN_FREQ = 60
+MIN_FREQ = 100
 WINDOW_SIZE = 5
-LEARNING_RATE = 1E-3
+LEARNING_RATE = 1E-2
 HIDDEN_SIZE = 300
 _random_seed = 0
 # liste_termini_weat
@@ -57,17 +58,18 @@ A = ["male", "man", "boy", "brother", "he", "him", "his", "son"]
 B = ["female", "woman", "girl", "sister", "she", "her", "hers", "daughter"]
 WEATLIST = S+T+A+B
 
-syn0 = np.load('syn0_final_torch.npy')
-syn1 = np.load('syn1_final_torch.npy')
+output_dir = '/home/apera/py-xw2v/test256_valerio+neg/'
 
+syn0 = np.load(output_dir+'syn0_final_torch.npy')
+syn1 = np.load(output_dir+'syn1_final_torch.npy')
 
-with open("vocab_300.pkl", "rb") as v:
+with open(output_dir+"vocab_shuffle.pkl", "rb") as v:
   vocab = pickle.load(v)
 
-with open("unigram_counts_300.pkl", "rb") as u:
+with open(output_dir+"unigram_counts_shuffle.pkl", "rb") as u:
   unigram_counts = pickle.load(u)
 
-with open("inv_vocab_300.pkl", "rb") as iv:
+with open(output_dir+"inv_vocab_shuffle.pkl", "rb") as iv:
   inv_vocab = pickle.load(iv)
 
 """
@@ -98,7 +100,8 @@ def get_text(text):
 
     return iter(text)
 
-def build_dataset(text, max_window, whitelist=[], min_freq=1, sampling_rate=1e-3, dynamic_window=True, batch_n_sentence=10):
+
+def build_dataset(text, max_window, whitelist=[], min_freq=1, sampling_rate=1e-3, dynamic_window=True, batch_n_sentence=None):
     """
     Builds post training dataset by creating tuples that only contain weat words.
     """
@@ -122,7 +125,14 @@ def build_dataset(text, max_window, whitelist=[], min_freq=1, sampling_rate=1e-3
     _vocab_size = len(unigram_counts)
     _inv_vocab = inv_vocab
 
+    S = ["science", "technology", "physics", "chemistry", "einstein", "nasa",
+        "experiment", "astronomy"]
+    T = ["poetry", "art", "shakespeare", "dance", "literature", "novel", "symphony", "drama"]
+    A = ["male", "man", "boy", "brother", "he", "him", "his", "son"]
+    B = ["female", "woman", "girl", "sister", "she", "her", "hers", "daughter"]
+    
     _data = []
+    _data_weat = []
 
     step_log = 1000
 
@@ -155,13 +165,16 @@ def build_dataset(text, max_window, whitelist=[], min_freq=1, sampling_rate=1e-3
                   if BATCH_SIZE == 'auto':
                       _sent_batch.append([_vocab[t], _vocab[sentence[c]], n_sent])
                   else:
-                      _data.append([_vocab[t], _vocab[sentence[c]], n_sent])
+                      if t in S+T+A+B: # save tuples with weat
+                          _data_weat.append([_vocab[t], _vocab[sentence[c]], n_sent])
+                      else:
+                          _data.append([_vocab[t], _vocab[sentence[c]], n_sent])
 
           if (BATCH_SIZE == 'auto') and (batch_n_sentence == 1):
               _data.append(_sent_batch)
             
           tmp_batch_sentence += 1
-          if batch_n_sentence < tmp_batch_sentence:
+          if batch_n_sentence!=None and batch_n_sentence < tmp_batch_sentence:
               _data.append(_sent_batch)
               _sent_batch = []
               tmp_batch_sentence = 0
@@ -185,11 +198,15 @@ def build_dataset(text, max_window, whitelist=[], min_freq=1, sampling_rate=1e-3
         random.seed(_random_seed) #ensures reproducibility
         random.shuffle(_data)
         
+        _data = _data_weat + _data # put weat tuples first
         #batch _inputs and _labels
         _data_batch = split_given_size(_data, BATCH_SIZE)
     
         #remove batch if size < batch_size
         _data_batch = [x for x in _data_batch if len(x) == BATCH_SIZE]
+
+        _data_batch = list(reversed(_data_batch)) # change order of tuples to have weat as the last ones
+
 
     #repeat epoch times (done during training)
 
@@ -197,19 +214,21 @@ def build_dataset(text, max_window, whitelist=[], min_freq=1, sampling_rate=1e-3
 
     return _data, _vocab, _inv_vocab, _unigram_counts
 
+
 """
 Build DATASET
 """
 data, vocab, inv_vocab, unigram_counts = build_dataset(text, WINDOW_SIZE, WEATLIST.copy(), MIN_FREQ, 0, dynamic_window=False)
 print('dataset built')
 
-with open("data_v2_300.pkl", "wb") as han:
+
+with open(output_dir+"data_v2.pkl", "wb") as han:
     pickle.dump(data, han)
-with open("vocab_v2_300.pkl", "wb") as han:
+with open(output_dir+"vocab_v2.pkl", "wb") as han:
     pickle.dump(vocab, han)
-with open("inv_vocab_v2_300.pkl", "wb") as han:
+with open(output_dir+"inv_vocab_v2.pkl", "wb") as han:
     pickle.dump(inv_vocab, han)
-with open("unigram_counts_v2_300.pkl", "wb") as han:
+with open(output_dir+"unigram_counts_v2.pkl", "wb") as han:
     pickle.dump(unigram_counts, han)
 
 
@@ -228,7 +247,7 @@ with open("unigram_counts_v2_300.pkl", "wb") as han:
 """If training data is needed (dynamic window and subsampling frequent words):"""
 
 if MODE == 'train':
-  with open("data_300.pkl", "rb") as f:
+  with open(output_dir+"data_shuffle.pkl", "rb") as f:
     data = pickle.load(f)
 
 
@@ -258,12 +277,12 @@ tupleDict_reordered = {tuple(k): tupleDict[tuple(k)] for k in tuple_set_1}
 
 if MODE == 'post':
 #post training data
-  with open("dict_tuple_sent_count_300.pkl", "wb") as f:
+  with open(output_dir+"dict_tuple_sent_count_shuffle.pkl", "wb") as f:
     pickle.dump(tupleDict_reordered, f)
 
 if MODE == 'train':
 # training data
-  with open("dict_tuple_sent_count_traindata_300.pkl", "wb") as f:
+  with open(output_dir+"dict_tuple_sent_count_traindata_shuffle.pkl", "wb") as f:
     pickle.dump(tupleDict_reordered, f)
 
 """Dizionario per frasi"""
@@ -279,12 +298,12 @@ for key, val in diz_sent_reshaped:
 
 if MODE == 'post':
 # post training data
-  with open("dict_sent_tuple_count_300.pkl", "wb") as f:
+  with open(output_dir+"dict_sent_tuple_count_shuffle.pkl", "wb") as f:
     pickle.dump(sentDict, f)
 
 if MODE == 'train':
 # training data
-  with open("dict_sent_tuple_count_traindata_300.pkl", "wb") as f:
+  with open(output_dir+"dict_sent_tuple_count_traindata_shuffle.pkl", "wb") as f:
     pickle.dump(sentDict, f)
 
 """## Compute gradient"""
@@ -307,17 +326,15 @@ weat_tuple_counts = Counter([inv_vocab[x[0]] for x in full_batch_flat])
 
 array_reduced_full = np.zeros((len(full_batch_flat), HIDDEN_SIZE))
 
-# ci mette circa 6m a fare calcolo+salvataggio
 i=0
 progress = 0
 for batch in full_batch:
   inputs = [x[0] for x in batch]
   labels = [x[1] for x in batch]
 
-
   if LOSS == 'NG':
     loss_ng = _negative_sampling_loss_torch(inputs, labels, len(inputs),
-                                            unigram_counts, 5, weights, len(vocab)) 
+                                            unigram_counts, NEGATIVES, weights, len(vocab)) 
 
   if LOSS == 'FULL':
     loss_ng = _full_loss_torch(inputs, labels, len(inputs),
@@ -337,22 +354,22 @@ for batch in full_batch:
 
 if MODE == 'post' and LOSS == 'NG':
 # post training data
-  with open("array_gradients_all_tuples_300.pkl", "wb") as f:
+  with open(output_dir+"array_gradients_all_tuples_shuffle.pkl", "wb") as f:
     pickle.dump(array_reduced_full, f)
 
 if MODE == 'train' and LOSS == 'NG':
 # training data
-  with open("array_gradients_all_tuples_traindata_300.pkl", "wb") as f:
+  with open(output_dir+"array_gradients_all_tuples_traindata_shuffle.pkl", "wb") as f:
     pickle.dump(array_reduced_full, f)
 
 if MODE == 'post' and LOSS == 'FULL':
 # post training data
-  with open("array_gradients_all_tuples_full_300.pkl", "wb") as f:
+  with open(output_dir+"array_gradients_all_tuples_full_shuffle.pkl", "wb") as f:
     pickle.dump(array_reduced_full, f)
 
 if MODE == 'train' and LOSS == 'FULL':
 # training data
-  with open("array_gradients_all_tuples_traindata_full_300.pkl", "wb") as f:
+  with open(output_dir+"array_gradients_all_tuples_traindata_full_shuffle.pkl", "wb") as f:
     pickle.dump(array_reduced_full, f)
 
 """## Save unique tuples and corresponding gradients index"""
@@ -361,10 +378,10 @@ dict_tuple_index = {key: i for i, key in enumerate(full_batch_flat)}
 
 if MODE == 'post':
 # post training data
-  with open("dict_all_tuples_300.pkl", "wb") as f:
+  with open(output_dir+"dict_all_tuples_shuffle.pkl", "wb") as f:
     pickle.dump(dict_tuple_index, f)
 
 if MODE == 'train':
 # training data
-  with open("dict_all_tuples_traindata_300.pkl", "wb") as f:
+  with open(output_dir+"dict_all_tuples_traindata_shuffle.pkl", "wb") as f:
     pickle.dump(dict_tuple_index, f)

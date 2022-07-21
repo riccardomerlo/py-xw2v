@@ -116,13 +116,15 @@ def effect_sizev2(t1, t2, att1, att2):
 """# Load data"""
 
 BATCH_SIZE = 256
-NEGATIVES = 5
-EPOCHS = 3
+BATCH_N_SENTENCE = 10
+NEGATIVES = 20
+EPOCHS = 5
 SAMPLING_RATE = 1E-3
-MIN_FREQ = 60
+MIN_FREQ = 100
 WINDOW_SIZE = 5
-LEARNING_RATE = 1E-3
+LEARNING_RATE = 1E-2
 HIDDEN_SIZE = 300
+_random_seed = 0
 # liste_termini_weat
 S = ["science", "technology", "physics", "chemistry", "einstein", "nasa",
     "experiment", "astronomy"]
@@ -131,18 +133,21 @@ A = ["male", "man", "boy", "brother", "he", "him", "his", "son"]
 B = ["female", "woman", "girl", "sister", "she", "her", "hers", "daughter"]
 WEATLIST = S+T+A+B
 
+output_dir = '/home/apera/py-xw2v/test256_valerio+neg/'
+
 text = read_corpus('./corpus/nyt_dal_90_ad_oggi.txt')
 
-with open("data_300.pkl", "rb") as f:
+
+with open(output_dir+"data_shuffle.pkl", "rb") as f:
   data = pickle.load(f)
 
-with open("unigram_counts_300.pkl", "rb") as f:
+with open(output_dir+"unigram_counts_shuffle.pkl", "rb") as f:
   unigram_counts = pickle.load(f)
 
-with open("vocab_300.pkl", "rb") as f:
+with open(output_dir+"vocab_shuffle.pkl", "rb") as f:
   vocab = pickle.load(f)
 
-with open("inv_vocab_300.pkl", "rb") as f:
+with open(output_dir+"inv_vocab_shuffle.pkl", "rb") as f:
   inv_vocab = pickle.load(f)
 
 
@@ -154,34 +159,42 @@ list_approx_words = list(set(list_index_weat.copy()))
 
 list_sim_sent_retrain = []
 sent_id = 151078
+#sent_ids = set([x[2] for x in data[batch_id]])
 sent_text = text[sent_id]
 print(sent_text)
 
 log_per_steps= 1000#10000  # Every `log_per_steps` steps to log the value of loss to be minimized.
 
-# flat_data = [x for xs in data for x in xs]
+flat_data = [x for xs in data for x in xs]
 
 # print([(inv_vocab[x[0]], inv_vocab[x[1]]) for x in flat_data if x[2]==sent_id])
-# flat_data_rt = [x for x in flat_data if x[2]!=sent_id]
+flat_data_rt = [x for x in flat_data if x[2]!=sent_id]
 
-# data_rt = split_given_size(flat_data_rt, BATCH_SIZE)
-# data_rt = [x for x in data_rt if len(x) == BATCH_SIZE]
+flat_data_rt = list(reversed(flat_data_rt))
 
-data_rt = [x for x in data if len(x) > 0 and x[0][2]!=sent_id] # remove whole batch related to sentence
+data_rt = split_given_size(flat_data_rt, BATCH_SIZE)
+data_rt = [x for x in data_rt if len(x) == BATCH_SIZE]
+
+data_rt = list(reversed(data_rt)) # tuples with weat words are again the last ones
+
+#data_rt = [data[i] for i in range(len(data)) if i!=batch_id] # remove whole batch related to sentence
 unigram_counts_rt = unigram_counts.copy()
 vocab_rt = vocab.copy()
 for key in vocab:
-    if key in sent_text:
-        unigram_counts_rt[vocab[key]] = unigram_counts[vocab[key]]-1
+    for sent in sent_text:
+        if key in sent:
+            unigram_counts_rt[vocab[key]] = unigram_counts[vocab[key]]-1
 inv_vocab_rt = {v: k for k, v in vocab_rt.items()}
 
         #data_rt, unigram_counts_rt, vocab_rt, inv_vocab_rt = create_skipgram(text_rt, WINDOW_SIZE, WEATLIST, MIN_FREQ, SAMPLING_RATE, EPOCHS, BATCH_SIZE)
 
 word2vec = Word2VecModel(hidden_size=HIDDEN_SIZE,
-                         batch_size="auto",
+                         batch_size=BATCH_SIZE,
+                         batch_n_sentence=BATCH_N_SENTENCE,
                          negatives=NEGATIVES,
                          power=0.75,
-                         alpha=LEARNING_RATE)
+                         alpha=LEARNING_RATE,
+                         output_dir=output_dir)
 
 word2vec._data = data_rt
 word2vec._vocab = vocab_rt
@@ -193,7 +206,7 @@ word2vec._text = text
 word2vec.build_weights()
 word2vec.train(EPOCHS, save=False, retrain=True)
 
-print("Re-training for sentence "+str(sent_id)+" completed")
+print("Re-training for batch "+str(sent_id)+" completed")
 
 w0 = word2vec.syn0.cpu().detach().numpy()
 w1 = word2vec.syn1.cpu().detach().numpy()

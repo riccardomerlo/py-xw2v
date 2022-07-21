@@ -51,12 +51,12 @@ def split_given_size(a, size):
 """# Load data"""
 
 BATCH_SIZE = 256
-NEGATIVES = 5
-EPOCHS = 3
+NEGATIVES = 20
+EPOCHS = 5
 SAMPLING_RATE = 1E-3
-MIN_FREQ = 60
+MIN_FREQ = 100
 WINDOW_SIZE = 5
-LEARNING_RATE = 1E-3
+LEARNING_RATE = 1E-2
 HIDDEN_SIZE = 300
 # liste_termini_weat
 S = ["science", "technology", "physics", "chemistry", "einstein", "nasa",
@@ -66,45 +66,47 @@ A = ["male", "man", "boy", "brother", "he", "him", "his", "son"]
 B = ["female", "woman", "girl", "sister", "she", "her", "hers", "daughter"]
 WEATLIST = S+T+A+B
 
-syn0 = np.load('syn0_final_torch.npy')
-syn1 = np.load('syn1_final_torch.npy')
+output_dir = '/home/apera/py-xw2v/test256_valerio+neg/'
 
-#with open("data.pkl", "rb") as f:
-#  data = pickle.load(f)
+syn0 = np.load(output_dir+'syn0_final_torch.npy')
+syn1 = np.load(output_dir+'syn1_final_torch.npy')
 
-with open("vocab_v2_300.pkl", "rb") as v:
+with open(output_dir+"data_shuffle.pkl", "rb") as f:
+    data = pickle.load(f)
+
+with open(output_dir+"vocab_v2.pkl", "rb") as v:
   vocab = pickle.load(v)
 
-with open("unigram_counts_v2_300.pkl", "rb") as u:
+with open(output_dir+"unigram_counts_v2.pkl", "rb") as u:
   unigram_counts = pickle.load(u)
 
-with open("inv_vocab_v2_300.pkl", "rb") as iv:
+with open(output_dir+"inv_vocab_v2.pkl", "rb") as iv:
   inv_vocab = pickle.load(iv)
 
 # load post train data
-with open("dict_all_tuples_300.pkl", "rb") as iv:
+with open(output_dir+"dict_all_tuples_shuffle.pkl", "rb") as iv:
   dict_all_tuples_posttrain = pickle.load(iv)
 
-with open("dict_sent_tuple_count_300.pkl", "rb") as iv:
+with open(output_dir+"dict_sent_tuple_count_shuffle.pkl", "rb") as iv:
   dict_sent_tuple_count_posttrain = pickle.load(iv)
 
-with open("dict_tuple_sent_count_300.pkl", "rb") as iv:
+with open(output_dir+"dict_tuple_sent_count_shuffle.pkl", "rb") as iv:
   dict_tuple_sent_count_posttrain = pickle.load(iv)
 
-with open("array_gradients_all_tuples_300.pkl", "rb") as iv:
+with open(output_dir+"array_gradients_all_tuples_shuffle.pkl", "rb") as iv:
   array_gradients_posttrain = pickle.load(iv)
 
 # load train data
-with open("dict_all_tuples_traindata_300.pkl", "rb") as iv:
+with open(output_dir+"dict_all_tuples_traindata_shuffle.pkl", "rb") as iv:
   dict_all_tuples_train = pickle.load(iv)
 
-with open("dict_sent_tuple_count_traindata_300.pkl", "rb") as iv:
+with open(output_dir+"dict_sent_tuple_count_traindata_shuffle.pkl", "rb") as iv:
   dict_sent_tuple_count_train = pickle.load(iv)
 
-with open("dict_tuple_sent_count_traindata_300.pkl", "rb") as iv:
+with open(output_dir+"dict_tuple_sent_count_traindata_shuffle.pkl", "rb") as iv:
   dict_tuple_sent_count_train = pickle.load(iv)
 
-with open("array_gradients_all_tuples_traindata_300.pkl", "rb") as iv:
+with open(output_dir+"array_gradients_all_tuples_traindata_shuffle.pkl", "rb") as iv:
   array_gradients_train = pickle.load(iv)
 
 """# Try with one sent"""
@@ -113,9 +115,7 @@ list_index_weat = []
 for word in S+T+A+B:
   list_index_weat.append(vocab[word])
 
-
 list_approx_words = list(set(list_index_weat.copy()))
-
 
 weights = [torch.from_numpy(syn0).requires_grad_(), torch.from_numpy(syn1).requires_grad_()]
 
@@ -123,9 +123,12 @@ weights = [torch.from_numpy(syn0).requires_grad_(), torch.from_numpy(syn1).requi
 """
 Read CORPUS with only sentences containing WEAT words
 """
-text = read_corpus('./corpus/nyt_dal_90_ad_oggi.txt')
+#text = read_corpus('./corpus/nyt_dal_90_ad_oggi.txt')
 
-syn0_final = np.load('syn0_final_torch.npy')
+with open(output_dir+"text_shuffle.pkl", "rb") as iv:
+  text = pickle.load(iv)
+
+syn0_final = np.load(output_dir+'syn0_final_torch.npy')
 
 vocab_words = [key for key in vocab]
 wv = WordVectors(syn0_final, vocab_words)
@@ -214,7 +217,8 @@ def get_sent_grad(diz_sent_tuple, diz_mapping, arr_grad, sent_id):
     return: dictionary of sentence gradient by target word
     """
     diz_grad_sent = {}
-    sent = diz_sent_tuple[sent_id]
+    sent = [diz_sent_tuple[si] for si in sent_id]
+    sent = [y for x in sent for y in x]
     for tu in sent:
       couple = tu[0]
       count = tu[1]
@@ -236,7 +240,7 @@ def get_hessian_posttrain(word):
   list_index_weat: list
   """
   idx_w = vocab[word]
-  with open(str(idx_w)+'_hessian_300.pkl', "rb") as f:
+  with open(output_dir+str(idx_w)+'_hessian_shuffle.pkl', "rb") as f:
       hessian_word = pickle.load(f)
   return hessian_word
 
@@ -248,7 +252,7 @@ def get_hessian_train(word):
   list_index_weat: list
   """
   idx_w = vocab[word]
-  with open(str(idx_w)+'_hessian_traindata_300.pkl', "rb") as f:
+  with open(output_dir+str(idx_w)+'_hessian_traindata_shuffle.pkl', "rb") as f:
       hessian_word = pickle.load(f)
   return hessian_word
 
@@ -264,12 +268,13 @@ def get_emb_pert(perturbed_emb, word):
 
 def get_perturbed_emb_sent(wv, WEATLIST, diz_sent_tuple, diz_tuple_sent, diz_mapping, arr_grad, sent_id, sent_text, post_train=True):
     diz_grad_sent = get_sent_grad(diz_sent_tuple, diz_mapping, arr_grad, sent_id)
-    print(diz_grad_sent.keys())
+    set_words = {w for w in [y for x in [text[si] for si in sent_id] for y in x]}
+    #print(diz_grad_sent.keys())
     perturbed_emb = {}  # dictionary {word: emb}
     #hessian_diz = get_hessian_words(list_index_weat, diz_tuple_sent, diz_mapping, arr_grad)
     for word in WEATLIST:
         emb = get_emb_og(wv, word)
-        if word in sent_text:  # single entity
+        if word in set_words:  # single entity
             V = len(wv._vocab)
             if word in diz_grad_sent:
                 # gradient for the word of interest
@@ -290,7 +295,6 @@ def get_perturbed_emb_sent(wv, WEATLIST, diz_sent_tuple, diz_tuple_sent, diz_map
     return perturbed_emb
 
 
-# list_sent = []
 # list_sentid = []
 # #list_diffbias = []
 # list_efpert_posttrain = []
@@ -303,156 +307,183 @@ def get_perturbed_emb_sent(wv, WEATLIST, diz_sent_tuple, diz_tuple_sent, diz_map
 # #list_simTB = []
 
 
+# flat_data = [y for x in data for y in x]
+# set_sent_ids = set([x[2] for x in flat_data])
+
 # i=0
-# for sent_id in range(len(text)):
-#     sent_text = text[sent_id]
-#     first=True
-#     for weat_w in WEATLIST:
-#         if weat_w in sent_text and first==True:
-#             # post train data
-#             post_train_tuples = [(inv_vocab[x[0][0]], inv_vocab[x[0][1]]) for x in dict_sent_tuple_count_posttrain[sent_id]]
-#             perturbed_emb_posttrain = get_perturbed_emb_sent(wv, WEATLIST, dict_sent_tuple_count_posttrain, dict_tuple_sent_count_posttrain, dict_all_tuples_posttrain, array_gradients_posttrain, sent_id, sent_text, post_train=True)
-         
-#             t1 = np.array([get_emb_pert(perturbed_emb_posttrain, word) for word in S])
-#             t2 = np.array([get_emb_pert(perturbed_emb_posttrain, word) for word in T])
-#             att1 = np.array([get_emb_pert(perturbed_emb_posttrain, word) for word in A])
-#             att2 = np.array([get_emb_pert(perturbed_emb_posttrain, word) for word in B])
+# for sent_id in set_sent_ids:
+#   sent_text = text[sent_id]
+#   first=True
+#   for weat_w in WEATLIST:
+#     if weat_w in sent_text and first==True:
+#       # post train data
+#       post_train_tuples = [(inv_vocab[x[0][0]], inv_vocab[x[0][1]]) for x in dict_sent_tuple_count_posttrain[sent_id]]
+#       perturbed_emb_posttrain = get_perturbed_emb_sent(wv, WEATLIST, dict_sent_tuple_count_posttrain, dict_tuple_sent_count_posttrain, dict_all_tuples_posttrain, array_gradients_posttrain, [sent_id], text, post_train=True)
 
-#             eff_size_pert_posttrain = effect_sizev2(t1, t2, att1, att2)
+#       t1 = np.array([get_emb_pert(perturbed_emb_posttrain, word) for word in S])
+#       t2 = np.array([get_emb_pert(perturbed_emb_posttrain, word) for word in T])
+#       att1 = np.array([get_emb_pert(perturbed_emb_posttrain, word) for word in A])
+#       att2 = np.array([get_emb_pert(perturbed_emb_posttrain, word) for word in B])
 
-#             # train data
-#             train_tuples = [(inv_vocab[x[0][0]], inv_vocab[x[0][1]]) for x in dict_sent_tuple_count_train[sent_id]]
-#             perturbed_emb_train = get_perturbed_emb_sent(wv, WEATLIST, dict_sent_tuple_count_train, dict_tuple_sent_count_train, dict_all_tuples_train, array_gradients_train, sent_id, sent_text, post_train=False)
+#       # for i in range(len(t1)):
+#       #   dict_post[S[i]] = t1[i]
+#       # for i in range(len(t2)):
+#       #   dict_post[T[i]] = t2[i]
+#       # for i in range(len(att1)):
+#       #   dict_post[A[i]] = att1[i]
+#       # for i in range(len(att2)):
+#       #   dict_post[B[i]] = att2[i]
 
-#             t1 = np.array([get_emb_pert(perturbed_emb_train, word) for word in S])
-#             t2 = np.array([get_emb_pert(perturbed_emb_train, word) for word in T])
-#             att1 = np.array([get_emb_pert(perturbed_emb_train, word) for word in A])
-#             att2 = np.array([get_emb_pert(perturbed_emb_train, word) for word in B])
+#       eff_size_pert_posttrain = effect_sizev2(t1, t2, att1, att2)
 
-#             eff_size_pert_train = effect_sizev2(t1, t2, att1, att2)
+#       # train data
+#       train_tuples = [(inv_vocab[x[0][0]], inv_vocab[x[0][1]]) for x in dict_sent_tuple_count_train[sent_id]]
+#       perturbed_emb_train = get_perturbed_emb_sent(wv, WEATLIST, dict_sent_tuple_count_train, dict_tuple_sent_count_train, dict_all_tuples_train, array_gradients_train, [sent_id], text, post_train=False)
 
-#             # list_simSA.append(np.array([mean_cos_similarity(tar, att1) for tar in t1]).mean())
-#             # list_simTA.append(np.array([mean_cos_similarity(tar, att1) for tar in t2]).mean())
-#             # list_simSB.append(np.array([mean_cos_similarity(tar, att2) for tar in t1]).mean())
-#             # list_simTB.append(np.array([mean_cos_similarity(tar, att2) for tar in t2]).mean())
-#             # effect size perturbed
-#             #ef_perturbed = effect_size(S, T, A, B, get_emb_pert, perturbed_emb)
+#       t1 = np.array([get_emb_pert(perturbed_emb_train, word) for word in S])
+#       t2 = np.array([get_emb_pert(perturbed_emb_train, word) for word in T])
+#       att1 = np.array([get_emb_pert(perturbed_emb_train, word) for word in A])
+#       att2 = np.array([get_emb_pert(perturbed_emb_train, word) for word in B])
 
-#             # differential bias post training
-#             diff_bias_posttrain = ef_full-eff_size_pert_posttrain
+#       # for i in range(len(t1)):
+#       #   dict_train[S[i]] = t1[i]
+#       # for i in range(len(t2)):
+#       #   dict_train[T[i]] = t2[i]
+#       # for i in range(len(att1)):
+#       #   dict_train[A[i]] = att1[i]
+#       # for i in range(len(att2)):
+#       #   dict_train[B[i]] = att2[i]
 
-#             # print("Sentence: ", sent_id, sent_text)
-#             # print("Effect size full corpus: ", ef_full)
-#             # print("Effect size perturbed corpus: ", eff_size_pert)
-#             # print("Differential bias: ", diff_bias)
+#       eff_size_pert_train = effect_sizev2(t1, t2, att1, att2)
 
-#             list_sent.append(' '.join(sent_text))
-#             list_sentid.append(sent_id)
-#            # list_diffbias.append(diff_bias)    
-#             list_efpert_posttrain.append(eff_size_pert_posttrain)
-#             list_efpert_train.append(eff_size_pert_train) 
-#             list_tuple_posttrain.append(post_train_tuples)  
-#             list_tuple_train.append(train_tuples)      
-#             i+=1
+#       # list_simSA.append(np.array([mean_cos_similarity(tar, att1) for tar in t1]).mean())
+#       # list_simTA.append(np.array([mean_cos_similarity(tar, att1) for tar in t2]).mean())
+#       # list_simSB.append(np.array([mean_cos_similarity(tar, att2) for tar in t1]).mean())
+#       # list_simTB.append(np.array([mean_cos_similarity(tar, att2) for tar in t2]).mean())
+#       # effect size perturbed
+#       #ef_perturbed = effect_size(S, T, A, B, get_emb_pert, perturbed_emb)
 
-#             if i%1000 == 0:
-#                 print(i)
-#             first=False
+#       # differential bias post training
+#       diff_bias_posttrain = ef_full-eff_size_pert_posttrain
 
-# df = pd.DataFrame(columns=['sent_id', 'sent_text', 'tuples_posttrain', 'tuples_train', 'effect_size_pert_posttrain', 'effect_size_pert_train'])
+#       # print("Sentence: ", sent_id, sent_text)
+#       # print("Effect size full corpus: ", ef_full)
+#       # print("Effect size perturbed corpus: ", eff_size_pert)
+#       # print("Differential bias: ", diff_bias)
+
+#     #  list_sent.append(' '.join(sent_text))
+#       list_sentid.append(sent_id)
+#     # list_diffbias.append(diff_bias)    
+#       list_efpert_posttrain.append(eff_size_pert_posttrain)
+#       list_efpert_train.append(eff_size_pert_train) 
+#       list_tuple_posttrain.append(post_train_tuples)  
+#       list_tuple_train.append(train_tuples)      
+#       i+=1
+
+#       if i%1000 == 0:
+#           print(i)
+#       first=False
+
+# # with open("dict_post_emb", "wb") as f:
+# #   pickle.dump(dict_post, f)
+
+# # with open("dict_train_emb", "wb") as f:
+# #   pickle.dump(dict_train, f)
+
+# df = pd.DataFrame(columns=['sent_id', 'tuples_post', 'tuples_train', 'effect_size_pert_posttrain', 'effect_size_pert_train'])
 # df['sent_id'] = list_sentid
-# df['sent_text'] = list_sent
 # #df['diff_bias'] = list_diffbias
-# df['tuples_posttrain'] = list_tuple_posttrain
+# df['tuples_post'] = list_tuple_posttrain
 # df['tuples_train'] = list_tuple_train
 # df['effect_size_pert_posttrain'] = list_efpert_posttrain
 # df['effect_size_pert_train'] = list_efpert_train
-# # df['sim S-A'] = list_simSA
-# # df['sim T-A'] = list_simTA
-# # df['sim S-B'] = list_simSB
-# # df['sim T-B'] = list_simTB
+# # # df['sim S-A'] = list_simSA
+# # # df['sim T-A'] = list_simTA
+# # # df['sim S-B'] = list_simSB
+# # # df['sim T-B'] = list_simTB
 
-# df.to_csv("effect_size_trainvspost_300.csv", index=False)
-
-
-# sent_id = 452458
-# sent_text = text[sent_id]
-
-# perturbed_emb = get_perturbed_emb_sent(wv, WEATLIST, dict_sent_tuple_count, dict_tuple_sent_count, dict_all_tuples, array_gradients, sent_id, sent_text)
-
-# t1 = np.array([get_emb_pert(perturbed_emb, word) for word in S])
-# t2 = np.array([get_emb_pert(perturbed_emb, word) for word in T])
-# att1 = np.array([get_emb_pert(perturbed_emb, word) for word in A])
-# att2 = np.array([get_emb_pert(perturbed_emb, word) for word in B])
-
-# eff_size_pert = effect_sizev2(t1, t2, att1, att2)
-
-# #syn0_retrain = np.load('syn0_final_torch_retrain.npy')
-
-# #wv_r = WordVectors(syn0_retrain, vocab_words)
-
-# # cosine similarity his, him, science
-# #print('his :', cos_similarity(get_emb_pert(perturbed_emb, "his"), get_emb_og(wv_r, "his")))
-# #print('him :', cos_similarity(get_emb_pert(perturbed_emb, "him"), get_emb_og(wv_r, "him")))
-# #print('science :', cos_similarity(get_emb_pert(perturbed_emb, "science"), get_emb_og(wv_r, "science")))
+# df.to_csv("effect_size_batch256.csv", index=False)
 
 
-# # effect size perturbed
-# #ef_perturbed = effect_size(S, T, A, B, get_emb_pert, perturbed_emb)
 
-# # differential bias
-# diff_bias = ef_full-eff_size_pert
-
-# print("Sentence: ", sent_id, sent_text)
-# print("Effect size full corpus: ", ef_full)
-# print("Effect size perturbed corpus: ", eff_size_pert)
-# print("Differential bias: ", diff_bias)
-    
-sent_id = 412444
+i=0
+sent_id = 321712
 sent_text = text[sent_id]
 first=True
+dict_train = {}
+dict_post = {}
 for weat_w in WEATLIST:
-    if weat_w in sent_text and first==True:
-        # post train data
-        post_train_tuples = [(inv_vocab[x[0][0]], inv_vocab[x[0][1]]) for x in dict_sent_tuple_count_posttrain[sent_id]]
-        perturbed_emb_posttrain = get_perturbed_emb_sent(wv, WEATLIST, dict_sent_tuple_count_posttrain, dict_tuple_sent_count_posttrain, dict_all_tuples_posttrain, array_gradients_posttrain, sent_id, sent_text, post_train=True)
-      
-        t1 = np.array([get_emb_pert(perturbed_emb_posttrain, word) for word in S])
-        t2 = np.array([get_emb_pert(perturbed_emb_posttrain, word) for word in T])
-        att1 = np.array([get_emb_pert(perturbed_emb_posttrain, word) for word in A])
-        att2 = np.array([get_emb_pert(perturbed_emb_posttrain, word) for word in B])
+  if weat_w in sent_text and first==True:
+#       # post train data
+    post_train_tuples = [(inv_vocab[x[0][0]], inv_vocab[x[0][1]]) for x in dict_sent_tuple_count_posttrain[sent_id]]
+    perturbed_emb_posttrain = get_perturbed_emb_sent(wv, WEATLIST, dict_sent_tuple_count_posttrain, dict_tuple_sent_count_posttrain, dict_all_tuples_posttrain, array_gradients_posttrain, [sent_id], text, post_train=True)
 
-        print("sim original: ", cos_similarity(get_emb_og(wv, "he"), get_emb_og(wv, "chemistry")))
-        print("sim perturbed: ", cos_similarity(get_emb_pert(perturbed_emb_posttrain, "he"), get_emb_pert(perturbed_emb_posttrain, "chemistry")))
+    t1 = np.array([get_emb_pert(perturbed_emb_posttrain, word) for word in S])
+    t2 = np.array([get_emb_pert(perturbed_emb_posttrain, word) for word in T])
+    att1 = np.array([get_emb_pert(perturbed_emb_posttrain, word) for word in A])
+    att2 = np.array([get_emb_pert(perturbed_emb_posttrain, word) for word in B])
 
-        eff_size_pert_posttrain = effect_sizev2(t1, t2, att1, att2)
+    for i in range(len(t1)):
+      dict_post[S[i]] = t1[i]
+    for i in range(len(t2)):
+      dict_post[T[i]] = t2[i]
+    for i in range(len(att1)):
+      dict_post[A[i]] = att1[i]
+    for i in range(len(att2)):
+      dict_post[B[i]] = att2[i]
 
-        # differential bias post training
-        diff_bias_posttrain = ef_full-eff_size_pert_posttrain
+    eff_size_pert_posttrain = effect_sizev2(t1, t2, att1, att2)
 
-        print("Sentence: ", sent_id, sent_text)
-        print("Effect size full corpus: ", ef_full)
-        print("Effect size perturbed corpus post train: ", eff_size_pert_posttrain)
+    # train data
+    train_tuples = [(inv_vocab[x[0][0]], inv_vocab[x[0][1]]) for x in dict_sent_tuple_count_train[sent_id]]
+    perturbed_emb_train = get_perturbed_emb_sent(wv, WEATLIST, dict_sent_tuple_count_train, dict_tuple_sent_count_train, dict_all_tuples_train, array_gradients_train, [sent_id], text, post_train=False)
 
+    t1 = np.array([get_emb_pert(perturbed_emb_train, word) for word in S])
+    t2 = np.array([get_emb_pert(perturbed_emb_train, word) for word in T])
+    att1 = np.array([get_emb_pert(perturbed_emb_train, word) for word in A])
+    att2 = np.array([get_emb_pert(perturbed_emb_train, word) for word in B])
 
-        # train data
-        train_tuples = [(inv_vocab[x[0][0]], inv_vocab[x[0][1]]) for x in dict_sent_tuple_count_train[sent_id]]
-        perturbed_emb_train = get_perturbed_emb_sent(wv, WEATLIST, dict_sent_tuple_count_train, dict_tuple_sent_count_train, dict_all_tuples_train, array_gradients_train, sent_id, sent_text, post_train=False)
-      
-        t1 = np.array([get_emb_pert(perturbed_emb_train, word) for word in S])
-        t2 = np.array([get_emb_pert(perturbed_emb_train, word) for word in T])
-        att1 = np.array([get_emb_pert(perturbed_emb_train, word) for word in A])
-        att2 = np.array([get_emb_pert(perturbed_emb_train, word) for word in B])
+    for i in range(len(t1)):
+      dict_train[S[i]] = t1[i]
+    for i in range(len(t2)):
+      dict_train[T[i]] = t2[i]
+    for i in range(len(att1)):
+      dict_train[A[i]] = att1[i]
+    for i in range(len(att2)):
+      dict_train[B[i]] = att2[i]
 
-        print("sim original train: ", cos_similarity(get_emb_og(wv, "he"), get_emb_og(wv, "chemistry")))
-        print("sim perturbed train: ", cos_similarity(get_emb_pert(perturbed_emb_train, "he"), get_emb_pert(perturbed_emb_train, "chemistry")))
+    eff_size_pert_train = effect_sizev2(t1, t2, att1, att2)
 
-        eff_size_pert_train = effect_sizev2(t1, t2, att1, att2)
+    # list_simSA.append(np.array([mean_cos_similarity(tar, att1) for tar in t1]).mean())
+    # list_simTA.append(np.array([mean_cos_similarity(tar, att1) for tar in t2]).mean())
+    # list_simSB.append(np.array([mean_cos_similarity(tar, att2) for tar in t1]).mean())
+    # list_simTB.append(np.array([mean_cos_similarity(tar, att2) for tar in t2]).mean())
+    # effect size perturbed
+    #ef_perturbed = effect_size(S, T, A, B, get_emb_pert, perturbed_emb)
 
-        # differential bias post training
-        diff_bias_train = ef_full-eff_size_pert_train
+    # differential bias post training
+    diff_bias_posttrain = ef_full-eff_size_pert_posttrain
 
-       # print("Sentence: ", sent_id, sent_text)
-       # print("Effect size full corpus: ", ef_full)
-        print("Effect size perturbed corpus train: ", eff_size_pert_train)
-        first=False
+    print("Sentence: ", sent_id, sent_text)
+    print("Effect size full corpus: ", ef_full)
+    print("Effect size approx train: ", eff_size_pert_train)
+    print("Effect size approx post: ", eff_size_pert_posttrain)
+
+  # #  list_sent.append(' '.join(sent_text))
+  #   list_sentid.append(sent_id)
+  # # list_diffbias.append(diff_bias)    
+  #   list_efpert_posttrain.append(eff_size_pert_posttrain)
+  #   list_efpert_train.append(eff_size_pert_train) 
+  #   list_tuple_posttrain.append(post_train_tuples)  
+  #   list_tuple_train.append(train_tuples)      
+    i+=1
+
+    if i%1000 == 0:
+        print(i)
+    first=False
+
+with open("dict_post_emb", "wb") as f:
+  pickle.dump(dict_post, f)
+
+with open("dict_train_emb", "wb") as f:
+  pickle.dump(dict_train, f)

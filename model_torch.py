@@ -7,6 +7,9 @@ from typing import List, \
 from dataset_torch import split_given_size, get_vocab, apply_reduction, subsample_prob, cache_subsample_prob, get_sampled_sent, get_dynamic_window
 import random
 
+from torch.optim import lr_scheduler
+import sys
+
 torch.set_default_tensor_type(torch.cuda.FloatTensor if torch.cuda.is_available() 
                                                      else torch.FloatTensor)
 
@@ -141,10 +144,10 @@ class Word2VecModel(torch.nn.Module):
             syn1, 0, torch.from_numpy(np.array(labels)).cuda())
 
         # sampled_syn1 = syn1[sampled_values]
-        list_sampled_syn1 = []
-        for batch in sampled_values:
-            sampled_syn1_batch = torch.index_select(syn1, 0, batch)
-            list_sampled_syn1.append(sampled_syn1_batch)
+        list_sampled_syn1 = [torch.index_select(syn1, 0, batch) for batch in sampled_values]
+        # for batch in sampled_values:
+        #     sampled_syn1_batch = torch.index_select(syn1, 0, batch)
+        #     list_sampled_syn1.append(sampled_syn1_batch)
 
         sampled_syn1 = torch.stack(list_sampled_syn1, 0)
 
@@ -166,7 +169,7 @@ class Word2VecModel(torch.nn.Module):
         return loss
 
 
-    def build_dataset(self, text, max_window, whitelist=[], min_freq=1, sampling_rate=1e-3 ):
+    def build_dataset(self, text, max_window, whitelist=[], min_freq=1, sampling_rate=1e-3, reorder_weat=True):
         """
         """
         self._sampling_rate = sampling_rate
@@ -193,15 +196,24 @@ class Word2VecModel(torch.nn.Module):
         self._vocab_size = len(unigram_counts)
         self._inv_vocab = inv_vocab
 
-
+        S = ["science", "technology", "physics", "chemistry", "einstein", "nasa",
+            "experiment", "astronomy"]
+        T = ["poetry", "art", "shakespeare", "dance", "literature", "novel", "symphony", "drama"]
+        A = ["male", "man", "boy", "brother", "he", "him", "his", "son"]
+        B = ["female", "woman", "girl", "sister", "she", "her", "hers", "daughter"]
+        
         _data = []
+        _data_weat = []
 
         step_log = 1000
 
         subsample_cache = {}
         if self._sampling_rate != 0:
             subsample_cache = cache_subsample_prob(count_vocab, self._sampling_rate)
-
+        
+        # change order of sents in text
+#        if reorder_weat:
+#            self._text = [[s for s in sentence if s in S+T+A+B] for sentence in self._text]
 
         #cache_sentence = []
         _sent_batch = []
@@ -226,7 +238,10 @@ class Word2VecModel(torch.nn.Module):
                     if self._batch_size == 'auto':
                         _sent_batch.append([self._vocab[t], self._vocab[sentence[c]], n_sent])
                     else:
-                        _data.append([self._vocab[t], self._vocab[sentence[c]], n_sent])
+                        if t in S+T+A+B: # save tuples with weat
+                            _data_weat.append([self._vocab[t], self._vocab[sentence[c]], n_sent])
+                        else:
+                            _data.append([self._vocab[t], self._vocab[sentence[c]], n_sent])
             if (self._batch_size == 'auto') and (self._batch_n_sentence == 1):
                 _data.append(_sent_batch)
             
@@ -245,7 +260,7 @@ class Word2VecModel(torch.nn.Module):
 
             #shuffle data
             random.seed(self._random_seed) #ensures reproducibility
-            random.shuffle(_data)
+            random.shuffle(_data)            
 
             #batch size is the number of tuples of each sentence
             _data_batch = _data
@@ -254,19 +269,29 @@ class Word2VecModel(torch.nn.Module):
             #shuffle data before batching
             random.seed(self._random_seed) #ensures reproducibility
             random.shuffle(_data)
-            
+
+            random.seed(self._random_seed) #ensures reproducibility
+            random.shuffle(_data_weat) # è da fare?
+
+            _data = _data_weat + _data # put weat tuples first
+
+            _data_flat = _data.copy()
+
             if self._fixed_batch_size:
                 #batch _inputs and _labels
                 _data_batch = split_given_size(_data, self._batch_size)
             
                 #remove batch if size < batch_size
                 _data_batch = [x for x in _data_batch if len(x) == self._batch_size]
+
+                _data_batch = list(reversed(_data_batch)) # change order of tuples to have weat as the last ones
             else:
                 _data_batch = _data
-        
+            
         #repeat epoch times (done during training)
 
         self._data = _data_batch
+        self._data_flat = _data_flat
 
         #with open("new_sentence.pkl", "wb") as han:
         #    pickle.dump(cache_sentence, han)
@@ -329,11 +354,14 @@ class Word2VecModel(torch.nn.Module):
         inputs_batch = []
         labels_batch = []
 
+        scheduler = lr_scheduler.StepLR(optimizer, step_size=len(self._data)/200, gamma=0.1)
+
         for epoch in range(epochs):
             # TODO: shuffling e re-batching anche per ciascuna epoch?
             print('-----start-epoch',epoch,'----')
+            # scheduler is re-initialized at the beginning of each epoch
+            #scheduler = lr_scheduler.StepLR(optimizer, step_size=len(self._data)/100, gamma=0.1)
             for step, batch in enumerate(self.get_data()):
-            
             #TODO salvare [self._vocab[t], self._vocab[sentence[c]]]
             #TODO costruire input, label e poi ripeto epoch volte, quindi calcolo batch e addestro
                 if len(batch) == 0:
@@ -359,10 +387,19 @@ class Word2VecModel(torch.nn.Module):
 
                 # update gradients
                 optimizer.step()
+
+                # scheduler
+                scheduler.step()
                 
                 if  step % log_per_steps == 0:
                     print('% :', round(step/len(self._data)* 100,1))
-            
+
+                
+                # np.save(self._output_dir+'syn0_final_torch_onestep', self.syn0.cpu().detach().numpy())
+                # np.save(self._output_dir+'syn1_final_torch_onestep', self.syn1.cpu().detach().numpy())
+
+                # sys.exit(0)
+                
             print('-----end-epoch',epoch,'----')
 
 
