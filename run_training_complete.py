@@ -11,7 +11,7 @@ torch.set_default_tensor_type(torch.cuda.FloatTensor if torch.cuda.is_available(
 Define CONSTANTS
 """
 
-output_dir = 'batch_one/'
+output_dir = 'batch_not_fixed/'
 
 # skip dataset creation if already done
 load_dataset = True 
@@ -22,14 +22,15 @@ if not os.path.exists(output_dir):
 
 
 
-BATCH_SIZE = 1
+BATCH_SIZE = 16834
+FIXED_BATCH_SIZE = False
 BATCH_N_SENTENCE = 10
-NEGATIVES = 5
-EPOCHS = 3
+NEGATIVES = 10
+EPOCHS = 10
 SAMPLING_RATE = 1E-3
-MIN_FREQ = 60
+MIN_FREQ = 30
 WINDOW_SIZE = 5
-LEARNING_RATE = 1E-3
+LEARNING_RATE = 1E-4
 HIDDEN_SIZE = 300
 # liste_termini_weat
 S = ["science", "technology", "physics", "chemistry", "einstein", "nasa", 
@@ -49,6 +50,7 @@ Create MODEL
 """
 word2vec = Word2VecModel(hidden_size=HIDDEN_SIZE,
                          batch_size=BATCH_SIZE,
+                         fixed_batch_size=FIXED_BATCH_SIZE,
                          batch_n_sentence=BATCH_N_SENTENCE,
                          negatives=NEGATIVES,
                          power=0.75,

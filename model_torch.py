@@ -53,6 +53,7 @@ class Word2VecModel(torch.nn.Module):
     def __init__(self,
                  hidden_size=300,
                  batch_size=256,
+                 fixed_batch_size=True, #if truncate batches with len < batch_size
                  batch_n_sentence=1,
                  negatives=5,
                  power=0.75,
@@ -64,6 +65,7 @@ class Word2VecModel(torch.nn.Module):
         
         self._hidden_size = hidden_size
         self._batch_size = batch_size
+        self._fixed_batch_size = fixed_batch_size
         self._batch_n_sentence = batch_n_sentence
         self._negatives = negatives
         self._power = power
@@ -115,7 +117,7 @@ class Word2VecModel(torch.nn.Module):
             syn0 = weights[0]
             syn1 = weights[1]
 
-        if self._batch_size == 'auto':
+        if (self._batch_size == 'auto') or (not self._fixed_batch_size):
             batch_size = len(inputs)
 
         torch.manual_seed(np.array(inputs).mean())  # TODO change seed?
@@ -253,12 +255,15 @@ class Word2VecModel(torch.nn.Module):
             random.seed(self._random_seed) #ensures reproducibility
             random.shuffle(_data)
             
-            #batch _inputs and _labels
-            _data_batch = split_given_size(_data, self._batch_size)
+            if self._fixed_batch_size:
+                #batch _inputs and _labels
+                _data_batch = split_given_size(_data, self._batch_size)
+            
+                #remove batch if size < batch_size
+                _data_batch = [x for x in _data_batch if len(x) == self._batch_size]
+            else:
+                _data_batch = _data
         
-            #remove batch if size < batch_size
-            _data_batch = [x for x in _data_batch if len(x) == self._batch_size]
-       
         #repeat epoch times (done during training)
 
         self._data = _data_batch
