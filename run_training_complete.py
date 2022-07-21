@@ -11,22 +11,22 @@ torch.set_default_tensor_type(torch.cuda.FloatTensor if torch.cuda.is_available(
 Define CONSTANTS
 """
 
-output_dir = 'test1/'
+output_dir = 'test8192_valerio_10epochs/'
 
 import os
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
 
 # skip dataset creation if already done
-load_dataset = True 
+load_dataset = False
 
 
-BATCH_SIZE = 256
+BATCH_SIZE = 8192
 BATCH_N_SENTENCE = 10
-NEGATIVES = 25
-EPOCHS = 5
+NEGATIVES = 20
+EPOCHS = 10
 SAMPLING_RATE = 1E-3
-MIN_FREQ = 60
+MIN_FREQ = 30
 WINDOW_SIZE = 5
 LEARNING_RATE = 1E-3
 HIDDEN_SIZE = 300
@@ -73,12 +73,15 @@ if not load_dataset:
         pickle.dump(word2vec._text, han)
     with open(output_dir+"data_shuffle.pkl", "wb") as han:
         pickle.dump(word2vec._data, han)
+    with open(output_dir+"data_flat_shuffle.pkl", "wb") as han:
+        pickle.dump(word2vec._data_flat, han)
     with open(output_dir+"vocab_shuffle.pkl", "wb") as han:
         pickle.dump(word2vec._vocab, han)
     with open(output_dir+"inv_vocab_shuffle.pkl", "wb") as han:
         pickle.dump(word2vec._inv_vocab, han)
     with open(output_dir+"unigram_counts_shuffle.pkl", "wb") as han:
         pickle.dump(word2vec._unigram_counts, han)
+    
 
 """
 Optional: Load DATASET
