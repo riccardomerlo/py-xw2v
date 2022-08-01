@@ -219,13 +219,13 @@ else:
 
 
 
-# consider both words of the given sentence and top50 words
+# consider both words of the given sentence
 sent_words = text[sent_id]
-list_top50 = [x for x in list(vocab.keys())[:50]]
-list_interest_words = [vocab[word] for word in list_top50+sent_words if word in vocab]
+#list_top50 = [x for x in list(vocab.keys())[:50]]
+list_interest_words = [vocab[word] for word in sent_words if word in vocab]
 
 flat_data = [x for y in data for x in y] 
-tuple_set = {(x[0], x[1]) for x in iter(flat_data)} 
+tuple_set = {(x[0], x[1]) for x in iter(flat_data) if x[2]==sent_id} 
 tuple_set_1 = [x for x in tuple_set if x[0] in list_interest_words] 
 
 """Compute gradients"""
@@ -260,10 +260,6 @@ for batch in full_batch:
     loss_ng = _negative_sampling_loss_torch(inputs, labels, len(inputs),
                                             unigram_counts, NEGATIVES, weights, len(vocab)) 
 
-  if LOSS == 'FULL':
-    loss_ng = _full_loss_torch(inputs, labels, len(inputs),
-                                            unigram_counts, None, weights, len(vocab)) 
-
   grad = torch.autograd.grad(loss_ng.sum(dim=1).reshape(1, len(inputs))[0],
                            weights[0], grad_outputs=torch.ones_like(loss_ng.sum(dim=1).reshape(1, len(inputs)))[0],
                            create_graph=True, retain_graph=True)[0]
@@ -278,7 +274,7 @@ for batch in full_batch:
 
 if MODE == 'post' and LOSS == 'NG':
 # post training data
-  with open(output_dir+"array_gradients_mostfreq+sent_"+str(sent_id)+"_shuffle.pkl", "wb") as f:
+  with open(output_dir+"array_gradients_sent_"+str(sent_id)+"_shuffle.pkl", "wb") as f:
     pickle.dump(array_reduced_full, f)
 
 """## Save unique tuples and corresponding gradients index"""
@@ -287,5 +283,5 @@ dict_tuple_index = {key: i for i, key in enumerate(full_batch_flat)}
 
 if MODE == 'post':
 # post training data
-  with open(output_dir+"dict_mostfreq_"+str(sent_id)+"_shuffle.pkl", "wb") as f:
+  with open(output_dir+"dict_sent_"+str(sent_id)+"_shuffle.pkl", "wb") as f:
     pickle.dump(dict_tuple_index, f)
