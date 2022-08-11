@@ -1,10 +1,11 @@
-mport pickle
+import pickle
 import numpy as np
 import pandas as pd
 import itertools
 from word_vectors import WordVectors
 
-lr_list = [1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1, 10]
+lr_list = [1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1] # I had to removed 10 because it was giving run time error as the denominator
+                                            # was too big in cosine similarity computation
 multi_step = False  # set to True if, given a target, all tuples with that target are processed all together for the gradients (SGD-like, SGD-like inverse ng loss, SGD-like inverse true loss)
                     # set to False if, given a target, all tuples with that target are processed one by one for the gradients (SGD-like inverse loss step-by-step)
 
@@ -98,7 +99,7 @@ else:
         syn0_og = np.load(output_dir+'syn0_final_gensim_seed'+str(seed)+'.npy')
         syn0_retrain = np.load(output_dir+str(sent_id)+'syn0_final_gensim_retrain_seed'+str(seed)+'.npy')
 
-        with open(output_dir+str(sent_id)+'_new_embeddings_seed'+str(seed)+'_alpha'+str(alpha)+'_SGDbetter.pkl', "rb") as v:
+        with open(output_dir+str(sent_id)+'_new_embeddings_seed'+str(seed)+'_SGDbetter.pkl', "rb") as v:
             syn0_approx = pickle.load(v)
         with open(output_dir+"vocab_gensim_seed"+str(seed)+".pkl", "rb") as v:
             vocab = pickle.load(v)
@@ -113,7 +114,7 @@ else:
             for lr in lr_list:
                 sim_og = cos_similarity(wv0_og.get_embedding(pair[0]), wv0_og.get_embedding(pair[1]))
                 sim_retrain = cos_similarity(wv0_retrain.get_embedding(pair[0]), wv0_retrain.get_embedding(pair[1]))
-                sim_approx = cos_similarity(syn0_approx[str(lr)][vocab[pair[0]]], syn0_approx[str(lr)][vocab[pair[1]]])
+                sim_approx = cos_similarity(syn0_approx[str(lr)][pair[0]], syn0_approx[str(lr)][pair[1]])
 
                 if pair not in dict_couple_og[str(lr)].keys():
                     dict_couple_og[str(lr)][pair] = sim_og 
@@ -131,3 +132,4 @@ else:
 
     df = pd.DataFrame(data, columns=['lr', 'w1', 'w2', 'og', 'retrain', 'approx'])
     df.to_csv('compare_SGDbetter_'+str(sent_id)+'_multilr_avg_seed.csv', index=False)
+
