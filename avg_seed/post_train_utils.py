@@ -204,8 +204,8 @@ def _true_loss_torch_inverse(_input, _label, weights):
         syn0 = weights[0].cuda()
         syn1 = weights[1].cuda()
 
-        true_classes_array = torch.unsqueeze(torch.tensor(_label), 1)
-        inputs_array = torch.unsqueeze(torch.tensor(_input), 1)
+       # true_classes_array = torch.unsqueeze(torch.tensor(_label), 1)
+       # inputs_array = torch.unsqueeze(torch.tensor(_input), 1)
         
         inputs_syn0 = torch.index_select(
             syn0, 0, torch.from_numpy(np.array(_input)).cuda())
@@ -271,6 +271,16 @@ def get_grad(loss, weights, target):
   return grad[target].detach().cpu().numpy()
 
 
+def get_grad_both(loss, weights, target, W):
+  grad = torch.autograd.grad(loss.sum(),
+                            weights[W],
+                            create_graph=True,
+                            retain_graph=True
+                            )[0]
+
+  return grad[target].detach().cpu().numpy()
+
+
 def get_approx(sent_id, output_dir, seed, negatives, lr, negative_sample, inverse, negative):
 
     syn0 = np.load(output_dir+'syn0_final_gensim_seed'+str(seed)+'.npy')
@@ -306,35 +316,109 @@ def get_approx(sent_id, output_dir, seed, negatives, lr, negative_sample, invers
     sentence_tuples = [(x[0], x[1]) for x in iter(data) if x[2] == sent_id] 
 
     new_embeddings = {}
+    for alpha in lr:
+        new_embeddings[str(alpha)] = {}
+        for word in set([vocab[x] for x in sent_text if x in vocab]):
 
-    for word in set([vocab[x] for x in sent_text if x in vocab]):
+            # get target grouped tuples for each word
+            target_tuples = [(x[0], x[1]) for x in sentence_tuples if x[0] == word]
 
-        # get target grouped tuples for each word
-        target_tuples = [(x[0], x[1]) for x in sentence_tuples if x[0] == word]
+            targets = [x[0] for x in target_tuples]
+            contexts = [x[1] for x in target_tuples]
+            # calc loss for each tuple to be removed
+            if inverse and negative:
+                target_loss = _negative_sampling_loss_torch_inverse(targets, contexts, unigram_counts, negatives, weights, negative_sample)
+                name = '_inverse_ng_'
+            elif not inverse and negative:
+                target_loss = _negative_sampling_loss_torch(targets, contexts, unigram_counts, negatives, weights, negative_sample)
+                name = '_straight_ng_'
+            elif inverse and not negative:
+                target_loss = _true_loss_torch_inverse(targets, contexts, weights)
+                name = '_inverse_true_'
+            elif not inverse and not negative:
+                target_loss = _true_loss_torch(targets, contexts, weights)
+                name = '_straight_true_'
 
-        targets = [x[0] for x in target_tuples]
-        contexts = [x[1] for x in target_tuples]
-        # calc loss for each tuple to be removed
-        if inverse and negative:
-            target_loss = _negative_sampling_loss_torch_inverse(targets, contexts, unigram_counts, negatives, weights, negative_sample)
-            name = '_inverse_ng_'
-        elif not inverse and negative:
-            target_loss = _negative_sampling_loss_torch(targets, contexts, unigram_counts, negatives, weights, negative_sample)
-            name = '_straight_ng_'
-        elif inverse and not negative:
-            target_loss = _true_loss_torch_inverse(targets, contexts, weights)
-            name = '_inverse_true_'
-        elif not inverse and not negative:
-            target_loss = _true_loss_torch(targets, contexts, weights)
-            name = '_straight_true_'
+            # calc gradient 
+            grad = get_grad(target_loss, weights, word)
 
-        # calc gradient 
-        grad = get_grad(target_loss, weights, word)
+            # approx target embedding (simulating SGD step)
+            new_emb = wv0.get_embedding(inv_vocab[word]) + grad * alpha
 
-        # approx target embedding (simulating SGD step)
-        new_emb = wv0.get_embedding(inv_vocab[word]) + grad * lr
-
-        new_embeddings[word] = new_emb
-
+            new_embeddings[str(alpha)][word] = new_emb
+        print('learning rate: ', alpha, 'done')
+    
     with open(output_dir+name+str(sent_id)+'_new_embeddings_seed'+str(seed)+'_SGD.pkl', 'wb') as han:
+        pickle.dump(new_embeddings, han)
+
+
+def get_approx_step(sent_id, output_dir, seed, lr):
+
+    with open(output_dir+"data_complete_seed"+str(seed)+".pkl", "rb") as f:
+        data = pickle.load(f)
+
+    with open(output_dir+"vocab_complete_seed"+str(seed)+".pkl", "rb") as v:
+        vocab = pickle.load(v)
+
+    with open(output_dir+"unigram_counts_complete_seed"+str(seed)+".pkl", "rb") as u:
+        unigram_counts = pickle.load(u)
+
+    with open(output_dir+"inv_vocab_complete_seed"+str(seed)+".pkl", "rb") as iv:
+        inv_vocab = pickle.load(iv)
+
+    with open(text_dir+"tokenized_text.pkl", "rb") as v:
+        text = pickle.load(v)
+
+    # get sentence's words
+    sent_text = text[sent_id]
+
+    print('full sentence', sent_text)
+
+    print('existing vocabs', [x for x in sent_text if x in vocab])
+
+    # get sentence's tuples
+    sentence_tuples = [(x[0], x[1]) for x in data if x[2] == sent_id] 
+
+    ordered_vocabs = list(reversed([x for x in sent_text if x in vocab]))
+
+    new_embeddings = {}
+    for alpha in lr:
+        new_embeddings[str(alpha)] = {}
+
+        # set weights
+        syn0 = np.load(output_dir+'syn0_final_gensim_seed'+str(seed)+'.npy')
+        syn1 = np.load(output_dir+'syn1_final_gensim_seed'+str(seed)+'.npy')
+        weights = [torch.from_numpy(syn0).requires_grad_().cuda(), torch.from_numpy(syn1).requires_grad_().cuda()]
+        wv0 = WordVectors(syn0, list(vocab.keys()))
+        wv1 = WordVectors(syn1, list(vocab.keys()))
+
+        for word in ordered_vocabs:
+            print('target word:', word)
+            word_tuples = [tu for tu in sentence_tuples if tu[0]==vocab[word]]
+
+            for tu in word_tuples:
+                target = tu[0]
+                context = tu[1]
+                target_loss = _true_loss_torch_inverse(target, context, weights)
+
+                # calc gradients
+                grad_target = get_grad_both(target_loss, weights, target, 0)
+                grad_context = get_grad_both(target_loss, weights, context, 1)
+
+                # approx embeddings (simulating SGD step)
+                new_emb_tar = wv0.get_embedding(inv_vocab[target]) + grad_target * alpha 
+                new_emb_cont = wv1.get_embedding(inv_vocab[context]) + grad_context * alpha
+
+                # update embedding matrix
+                syn0[target] = new_emb_tar
+                syn1[context] = new_emb_cont
+                weights = [torch.from_numpy(syn0).requires_grad_().cuda(), torch.from_numpy(syn1).requires_grad_().cuda()]
+                wv0 = WordVectors(syn0, list(vocab.keys()))
+                wv1 = WordVectors(syn1, list(vocab.keys()))
+
+            new_embeddings[str(alpha)][word] = wv0.get_embedding(word)
+        print('learning rate: ', alpha, 'done')
+    
+    
+    with open(output_dir+str(sent_id)+'_new_embeddings_seed'+str(seed)+'_SGDbetter.pkl', 'wb') as han:
         pickle.dump(new_embeddings, han)
