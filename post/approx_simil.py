@@ -2,7 +2,7 @@ import numpy as np
 from gensim.models import Word2Vec
 import pickle
 import pandas as pd
-from dataset_torch import read_corpus
+from pytorch.dataset_torch import read_corpus
 from collections import Counter
 
 def get_tuples(list_words, sentence_words, vocab):

@@ -20,7 +20,7 @@ import random
 from collections import Counter
 
 
-from dataset_torch import read_corpus, split_given_size, get_dynamic_window
+from pytorch.dataset_torch import read_corpus, split_given_size, get_dynamic_window
 from get_hessians_utils import _negative_sampling_loss_torch
 
 

@@ -2,7 +2,7 @@ import numpy as np
 from gensim.models import Word2Vec
 import pickle
 import pandas as pd
-from dataset_torch import read_corpus
+from pytorch.dataset_torch import read_corpus
 
 dir = "/home/rmerlo/py-xw2v/gensim_t2/"
 

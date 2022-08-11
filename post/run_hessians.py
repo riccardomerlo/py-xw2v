@@ -3,7 +3,7 @@ MAIN
 """
 
 from get_hessians_utils import get_full_hessian, get_full_hessian_negatives
-from dataset_torch import read_corpus
+from pytorch.dataset_torch import read_corpus
 import pickle
 import torch
 import numpy as np
