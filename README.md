@@ -1,21 +1,12 @@
-Implementation of word2vec using pytorch, with a spin-off to explain the model post-training following the idea of Brunet et al.
+Implementation of word2vec using pytorch and gensim, with a spin-off to explain the model post-training following the idea of Brunet et al. Directories:
 
-* model_torch: contains word2vec model methods
+* avg_seed: contains the code to run experiments with multiple seeds (then take the average of similarities) with the sentence of interest at the end of the dataset, training and retraining with 1 epoch and SGD-like or SGD-like inverse loss (both negative sampling and true context) approximation methods.
+* corpus: contains the original NYT corpus (nyt_dal_90_ad_oggi.zip) and some samples of the corpus no longer in use.
+* current_experiments: contains the code for approximation of the experiments brunet-like, SGD-like, SGD-like inverse loss and hybrid. Hessian matrices are taken from run_hessians.py located in the /post directory.
+* old_files_gensim: contains post_training with gensim files that are no longer in use.
+* old_files_pytorch: contains training, retraining and post_training with pytorch files that are no longer in use.
+* post: post training useful scripts, in particular get_hessians_utils.py and run_hessians.py.
+* useful_files+gensim: retraining with gensim file.
 
-* dataset_torch: contains methods useful to building the dataset from corpus
 
-* run_training_*: main file to create datasets, word2vec model and execute training
-
-* gradients_dict_creation: computes gradient for each tuple having at least a WEAT word
-
-* get_hessians: creates hessians from gradients dictionary 
-
-* after_training_torch:
-
-* evaluation_bias:
-
-* post_training_*:
-
-* retraining_embeddings:
-
-* word_vectors: contains utils methods to explore the model embedding matrix W0
+The file requirements.txt contains libraries requirements to be set for the working environment.
